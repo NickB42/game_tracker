@@ -4,8 +4,10 @@ const nodeEnvSchema = z.enum(["development", "test", "production"]);
 
 const envSchema = z.object({
   NODE_ENV: nodeEnvSchema.default("development"),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required."),
+  DATABASE_URL: z.string().min(1).optional(),
+  POSTGRES_PRISMA_URL: z.string().min(1).optional(),
   DIRECT_DATABASE_URL: z.string().url().optional(),
+  POSTGRES_URL_NON_POOLING: z.string().url().optional(),
   BETTER_AUTH_SECRET: z.string().min(1, "BETTER_AUTH_SECRET is required."),
   BETTER_AUTH_URL: z.string().url().optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
@@ -125,10 +127,26 @@ function getTrustedOrigins(env: RawEnv): string[] {
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
-  throw new Error(`Invalid environment configuration: ${parsedEnv.error.issues[0]?.message ?? "unknown error"}`);
+  const firstIssue = parsedEnv.error.issues[0];
+  const key = typeof firstIssue?.path?.[0] === "string" ? firstIssue.path[0] : "unknown";
+  throw new Error(`Invalid environment configuration: ${key} ${firstIssue?.message ?? "is invalid"}`);
 }
 
-const runtimeEnv = parsedEnv.data;
+const rawEnv = parsedEnv.data;
+
+const databaseUrl = rawEnv.DATABASE_URL ?? rawEnv.POSTGRES_PRISMA_URL;
+
+if (!databaseUrl) {
+  throw new Error("Invalid environment configuration: DATABASE_URL is required (or provide POSTGRES_PRISMA_URL from Vercel Postgres).");
+}
+
+const directDatabaseUrl = rawEnv.DIRECT_DATABASE_URL ?? rawEnv.POSTGRES_URL_NON_POOLING ?? databaseUrl;
+
+const runtimeEnv = {
+  ...rawEnv,
+  DATABASE_URL: databaseUrl,
+  DIRECT_DATABASE_URL: directDatabaseUrl,
+};
 
 if (runtimeEnv.NODE_ENV === "production" && runtimeEnv.BETTER_AUTH_SECRET.length < 32) {
   throw new Error("BETTER_AUTH_SECRET must be at least 32 characters in production.");
