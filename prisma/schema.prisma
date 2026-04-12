@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  name               String
+  emailVerified      Boolean  @default(false)
+  image              String?
+  role               Role     @default(MEMBER)
+  banned             Boolean  @default(false)
+  banReason          String?
+  banExpires         DateTime?
+  playerId           String?  @unique
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  player              Player?       @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  sessions            Session[]
+  accounts            Account[]
+  createdGameSessions GameSession[] @relation("GameSessionCreatedBy")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?   @db.Text
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+  @@map("verification")
+}
+
+model Player {
+  id          String   @id @default(cuid())
+  displayName String
+  notes       String?
+  isActive    Boolean  @default(true)
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user                User?
+  groupMemberships    GroupMembership[]
+  sessionParticipants SessionParticipant[]
+
+  @@index([displayName])
+  @@index([archivedAt])
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships  GroupMembership[]
+  gameSessions GameSession[]
+
+  @@unique([name])
+  @@index([archivedAt])
+}
+
+model GroupMembership {
+  id        String   @id @default(cuid())
+  groupId   String
+  playerId  String
+  createdAt DateTime @default(now())
+
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, playerId])
+  @@index([playerId])
+}
+
+model GameSession {
+  id              String   @id @default(cuid())
+  groupId         String?
+  title           String?
+  playedAt        DateTime
+  notes           String?
+  archivedAt      DateTime?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  group         Group?               @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdByUser User?                @relation("GameSessionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  participants  SessionParticipant[]
+  roundResults  RoundResult[]
+
+  @@index([groupId])
+  @@index([createdByUserId])
+  @@index([playedAt])
+  @@index([archivedAt])
+}
+
+model SessionParticipant {
+  id            String   @id @default(cuid())
+  gameSessionId String
+  playerId      String
+  seatOrder     Int?
+  createdAt     DateTime @default(now())
+
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  player      Player      @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  roundPlacements RoundPlacement[]
+
+  @@unique([gameSessionId, playerId])
+  @@unique([id, gameSessionId])
+  @@index([playerId])
+}
+
+model RoundResult {
+  id            String   @id @default(cuid())
+  gameSessionId String
+  sequenceNumber Int
+  notes         String?
+  archivedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  gameSession GameSession      @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  placements  RoundPlacement[]
+
+  @@unique([gameSessionId, sequenceNumber])
+  @@index([gameSessionId])
+  @@index([archivedAt])
+}
+
+model RoundPlacement {
+  id                   String   @id @default(cuid())
+  roundResultId        String
+  sessionParticipantId String
+  position             Int
+  createdAt            DateTime @default(now())
+
+  roundResult        RoundResult        @relation(fields: [roundResultId], references: [id], onDelete: Cascade)
+  sessionParticipant SessionParticipant @relation(fields: [sessionParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([roundResultId, sessionParticipantId])
+  @@unique([roundResultId, position])
+  @@index([sessionParticipantId])
+  @@index([position])
+}

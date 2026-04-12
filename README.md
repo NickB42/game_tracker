@@ -1,36 +1,326 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dreierspoil Tracker
 
-## Getting Started
+Private, invite-only web app for tracking card game sessions, participants, and winners.
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router) + TypeScript
+- PostgreSQL (Docker Compose)
+- Prisma ORM
+- Better Auth (email/password, invite-only)
+- Tailwind CSS
+- Zod
+
+## Environment Variables
+
+Copy the template and set values for your environment:
+
+```bash
+cp .env.example .env
+```
+
+Core variables:
+
+- `DATABASE_URL`: runtime connection string used by the app
+- `DIRECT_DATABASE_URL`: direct/unpooled connection string used by Prisma migrations (`migrate deploy`)
+- `BETTER_AUTH_SECRET`: auth signing/encryption secret (use 32+ characters in production)
+- `BETTER_AUTH_URL`: canonical app URL (`http://localhost:3000` locally, your domain in production)
+- `BETTER_AUTH_TRUSTED_ORIGINS` (optional): comma-separated extra trusted origins
+- `BETTER_AUTH_ALLOWED_HOSTS` (optional): comma-separated extra allowed host patterns for dynamic Better Auth base URL
+- `BETTER_AUTH_ENABLE_VERCEL_PREVIEW` (optional): set `true` to allow wildcard `*.vercel.app` preview hosts
+
+Seed-only variables (needed only when running `npm run db:seed`):
+
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+- `ADMIN_MUST_CHANGE_PASSWORD`
+
+## Prerequisites
+
+- Node.js 20+
+- Docker Desktop (or Docker Engine + Compose)
+- npm
+
+## 1. Start PostgreSQL locally
+
+From the project root:
+
+```bash
+docker compose up -d
+```
+
+Stop it later with:
+
+```bash
+docker compose down
+```
+
+## 2. Configure environment variables
+
+Create your local env file from the template:
+
+```bash
+cp .env.example .env
+```
+
+Required values are documented in `.env.example`, including:
+
+- `DATABASE_URL`
+- `DIRECT_DATABASE_URL`
+- `BETTER_AUTH_URL`
+- `BETTER_AUTH_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+- `ADMIN_MUST_CHANGE_PASSWORD`
+
+## 3. Install dependencies
+
+```bash
+npm install
+```
+
+## 4. Generate Prisma Client
+
+```bash
+npm run prisma:generate
+```
+
+## 5. Run Prisma migration (local development)
+
+```bash
+npm run prisma:migrate:dev -- --name init
+```
+
+For deployment environments, use:
+
+```bash
+npm run prisma:migrate:deploy
+```
+
+Do not use `prisma db push` for production.
+
+## 6. Seed initial admin user
+
+```bash
+npm run db:seed
+```
+
+The seed is idempotent:
+
+- Creates the admin only if the email does not already exist
+- Sets role to `ADMIN`
+- Creates credential account with hashed password
+- Supports `ADMIN_MUST_CHANGE_PASSWORD`
+
+## 7. Start the app locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `http://localhost:3000/login` for authentication
+- `http://localhost:3000/dashboard` for protected dashboard
+- `http://localhost:3000/api/health` for a minimal health check
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Playwright E2E Smoke Tests
 
-## Learn More
+This project includes a small Playwright smoke suite focused on high-value user journeys:
 
-To learn more about Next.js, take a look at the following resources:
+- login
+- forced password change
+- admin creates player
+- admin creates session
+- admin records one ranked round
+- global leaderboard health
+- admin users page health
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. Install Playwright browsers
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run test:e2e:install
+```
 
-## Deploy on Vercel
+### 2. Configure E2E environment variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Required for smoke tests:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `E2E_ADMIN_EMAIL`
+- `E2E_ADMIN_PASSWORD`
+- `E2E_MEMBER_EMAIL`
+- `E2E_MEMBER_PASSWORD`
+- `E2E_MEMBER_NEW_PASSWORD`
+
+Optional target override:
+
+- `PLAYWRIGHT_BASE_URL` (defaults to `http://127.0.0.1:3000`)
+
+Recommended setup:
+
+1. Add dedicated E2E users in `.env` (`E2E_*` variables are included in `.env.example`).
+2. Run `npm run db:seed` to ensure those users exist and are reset to expected smoke-test credentials.
+
+### 3. Run smoke tests locally
+
+If `PLAYWRIGHT_BASE_URL` is not set, Playwright starts the local app via `npm run dev` automatically.
+
+```bash
+npm run test:e2e
+```
+
+Useful variants:
+
+```bash
+npm run test:e2e:headed
+npm run test:e2e:ui
+```
+
+### 4. Run smoke tests against a Vercel preview deployment
+
+```bash
+PLAYWRIGHT_BASE_URL="https://your-preview-url.vercel.app" npm run test:e2e
+```
+
+Use preview-scoped test users and secrets. Do not run this suite against production by default.
+
+### 5. Important caveats
+
+- Never commit real credentials.
+- Prefer dedicated preview/local test users instead of manual shared accounts.
+- The forced-password smoke test expects the E2E member user to start with `mustChangePassword=true`; re-run `npm run db:seed` to reset baseline credentials/state when needed.
+- HTML test report is generated by Playwright (`playwright-report/`).
+
+## Deployment (GitHub + Vercel + Managed Postgres)
+
+### 1. Push repository to GitHub
+
+Initialize and push your repository (or push new commits if it already exists):
+
+```bash
+git add .
+git commit -m "Prepare deployment setup"
+git push origin main
+```
+
+### 2. Import project into Vercel
+
+1. In Vercel, click **Add New... > Project**.
+2. Import your GitHub repository.
+3. Keep framework as Next.js.
+4. Set the Vercel build command to:
+
+```bash
+npm run build:deploy
+```
+
+This build path runs Prisma client generation, applies migrations safely with `prisma migrate deploy`, and then builds the Next.js app.
+
+### 3. Connect a managed Postgres database
+
+Use either:
+
+- Vercel Postgres, or
+- another managed PostgreSQL provider.
+
+You need two connection URLs in Vercel env vars:
+
+- pooled/runtime URL -> `DATABASE_URL`
+- direct/unpooled URL -> `DIRECT_DATABASE_URL`
+
+For Vercel Postgres, map these safely:
+
+- `DATABASE_URL` = `POSTGRES_PRISMA_URL`
+- `DIRECT_DATABASE_URL` = `POSTGRES_URL_NON_POOLING`
+
+### 4. Configure production environment variables in Vercel
+
+Set these for the **Production** environment:
+
+- `DATABASE_URL`
+- `DIRECT_DATABASE_URL`
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL` (your production app URL, e.g. `https://your-domain.com`)
+- Optional: `BETTER_AUTH_TRUSTED_ORIGINS`
+- Optional: `BETTER_AUTH_ALLOWED_HOSTS`
+- Optional: `BETTER_AUTH_ENABLE_VERCEL_PREVIEW`
+
+If you need to run the admin seed in production, also add:
+
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+- `ADMIN_MUST_CHANGE_PASSWORD`
+
+### 5. Preview deployment handling
+
+Preview deployments are supported, but keep them isolated:
+
+1. Set preview-specific env vars in Vercel's **Preview** scope.
+2. Prefer a separate preview database (or branches) so preview changes do not affect production data.
+3. Do not reuse production secrets unless intended and safe.
+
+Better Auth setup in this repo is deployment-safe for previews:
+
+- dynamic host allow-listing from Vercel environment metadata
+- localhost support for development
+- optional wildcard preview support only when explicitly enabled (`BETTER_AUTH_ENABLE_VERCEL_PREVIEW=true`)
+
+### 6. First production deployment
+
+After env vars and DB are configured:
+
+1. Deploy `main` in Vercel.
+2. Verify successful build and migration step.
+3. Check health endpoint:
+
+```text
+https://your-production-domain/api/health
+```
+
+Expected response includes `ok`, environment, and basic database status.
+
+### 7. Seed first admin in production (if needed)
+
+Run seed once in a controlled environment where production env vars are available:
+
+```bash
+npm run db:seed
+```
+
+The seed is idempotent and will not create duplicate admin users for the same email.
+
+### 8. Promote later changes safely
+
+Recommended path:
+
+1. Push feature branch -> Preview deploy validates build/migrations against preview env.
+2. Merge to `main` -> Production deploy runs `prisma migrate deploy` and app build.
+3. Validate `/api/health` and key flows (login, dashboard, core CRUD).
+
+## Health Endpoint
+
+- Route: `/api/health`
+- Returns: app status, environment, timestamp, and simple DB connectivity state
+- Behavior:
+	- `200` with `{ ok: true, database: "up", ... }` when healthy
+	- `503` with `{ ok: false, database: "down", ... }` when DB is unavailable
+
+## Available Scripts
+
+- `npm run dev`
+- `npm run build`
+- `npm run build:deploy`
+- `npm run start`
+- `npm run lint`
+- `npm run prisma:generate`
+- `npm run prisma:migrate:dev`
+- `npm run prisma:migrate:deploy`
+- `npm run prisma:studio`
+- `npm run db:seed`
+- `npm run test:e2e`
+- `npm run test:e2e:headed`
+- `npm run test:e2e:ui`
+- `npm run test:e2e:install`

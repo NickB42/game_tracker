@@ -5,22 +5,42 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:deploy": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "test:e2e": "playwright test --grep @smoke",
+    "test:e2e:headed": "playwright test --grep @smoke --headed",
+    "test:e2e:ui": "playwright test --grep @smoke --ui",
+    "test:e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "^1.6.2",
+    "@prisma/client": "^6.19.3",
+    "better-auth": "^1.6.2",
     "next": "16.2.3",
+    "openskill": "^4.0.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
