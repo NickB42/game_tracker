@@ -3,8 +3,7 @@ import type { PublicCard } from "@/components/online/types";
 type LegalMove =
   | { type: "play"; cardIds: readonly string[] }
   | { type: "pickup" }
-  | { type: "blind_play" }
-  | { type: "face_up_pickup"; cardId: string };
+  | { type: "blind_play" };
 
 export function playKey(cardIds: readonly string[]): string {
   return cardIds.slice().sort().join("|");
@@ -102,15 +101,15 @@ export function getSelectedPlayMove(selectedCardIds: string[], legalPlayKeys: Se
 
 export function canDragCard(input: {
   cardId: string;
-  isMyTurn: boolean;
+  canPlayNow: boolean;
   isSubmitting: boolean;
   selectedCardIds: string[];
   legalPlayKeys: Set<string>;
   playableCardIds: Set<string>;
 }): boolean {
-  const { cardId, isMyTurn, isSubmitting, selectedCardIds, legalPlayKeys, playableCardIds } = input;
+  const { cardId, canPlayNow, isSubmitting, selectedCardIds, legalPlayKeys, playableCardIds } = input;
 
-  if (!isMyTurn || isSubmitting) {
+  if (!canPlayNow || isSubmitting) {
     return false;
   }
 

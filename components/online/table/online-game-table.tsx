@@ -19,8 +19,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BlindPlayOverlay } from "@/components/online/table/blind-play-overlay";
 import { CardView } from "@/components/online/table/card-view";
-import { DiscardPileDropZone, DISCARD_DROP_ZONE_ID } from "@/components/online/table/discard-pile-drop-zone";
-import { DrawPile } from "@/components/online/table/draw-pile";
+import { CenterPilesPanel } from "@/components/online/table/center-piles-panel";
+import { DISCARD_DROP_ZONE_ID } from "@/components/online/table/discard-pile-drop-zone";
 import { GameSidebar } from "@/components/online/table/game-sidebar";
 import { MoveActionBar } from "@/components/online/table/move-action-bar";
 import { PlayerHand } from "@/components/online/table/player-hand";
@@ -28,7 +28,7 @@ import { PlayerSeat } from "@/components/online/table/player-seat";
 import { RoundFinishBanner } from "@/components/online/table/round-finish-banner";
 import { TurnBanner } from "@/components/online/table/turn-banner";
 import { WaitingLobbyView } from "@/components/online/table/waiting-lobby-view";
-import { getLatestBlindPlayOutcome, getRoundFinishSummary, getSpecialEffectBadge } from "@/components/online/table/polish-state";
+import { getLatestBlindPlayOutcome, getRoundFinishSummary, getSpecialEffectBadge, humanizeEventLine } from "@/components/online/table/polish-state";
 import type { LobbySnapshot, PublicCard } from "@/components/online/types";
 import {
   buildCardIndex,
@@ -47,7 +47,14 @@ type OnlineGameTableProps = {
   isRefreshing: boolean;
   isSubmittingMove: boolean;
   error: string | null;
-  onSubmitMove: (move: { type: "play"; cardIds: string[] } | { type: "pickup" } | { type: "blind_play" } | { type: "face_up_pickup"; cardId: string }) => Promise<void>;
+  onSubmitMove: (move: { type: "play"; cardIds: string[] } | { type: "pickup" } | { type: "blind_play" }) => Promise<void>;
+  markReadyAction: (formData: FormData) => void | Promise<void>;
+  markNotReadyAction: (formData: FormData) => void | Promise<void>;
+  leaveLobbyAction: (formData: FormData) => void | Promise<void>;
+  startGameAction: (formData: FormData) => void | Promise<void>;
+  beginTurnsAction: (formData: FormData) => void | Promise<void>;
+  closeLobbyAction: (formData: FormData) => void | Promise<void>;
+  exportGameAction: (formData: FormData) => void | Promise<void>;
 };
 
 type DraggablePlayableCardProps = {
@@ -122,7 +129,21 @@ function DraggablePlayableCard({ card, moveIntent, canDrag, isCardDisabled, isSe
   );
 }
 
-export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmittingMove, error, onSubmitMove }: OnlineGameTableProps) {
+export function OnlineGameTable({
+  snapshot,
+  viewerUserId,
+  isRefreshing,
+  isSubmittingMove,
+  error,
+  onSubmitMove,
+  markReadyAction,
+  markNotReadyAction,
+  leaveLobbyAction,
+  startGameAction,
+  beginTurnsAction,
+  closeLobbyAction,
+  exportGameAction,
+}: OnlineGameTableProps) {
   const reduceMotion = useReducedMotion();
   const publicState = snapshot.game?.publicState ?? null;
   const isWaitingLobby = snapshot.lobby.status === "WAITING" && !publicState;
@@ -136,10 +157,12 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
   const [blindFxOutcome, setBlindFxOutcome] = useState<"success" | "pickup" | null>(null);
   const [blindFxMessage, setBlindFxMessage] = useState<string | null>(null);
   const [blindFxCard, setBlindFxCard] = useState<{ rank: string; suit: string } | null>(null);
-  const [blindFxAwaitingResult, setBlindFxAwaitingResult] = useState(false);
-  const [blindFxResolvedEventId, setBlindFxResolvedEventId] = useState<string | null>(null);
+  const [blindFxActorName, setBlindFxActorName] = useState<string | null>(null);
   const [roundFxVisible, setRoundFxVisible] = useState(false);
-  const blindFxTokenRef = useRef(0);
+  const lastShownBlindEventIdRef = useRef<string | null>(null);
+  const didBootstrapBlindEventRef = useRef(false);
+  const blindRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blindResolveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roundFxKeyRef = useRef<string | null>(null);
 
   const sensors = useSensors(
@@ -157,6 +180,10 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
     () => snapshot.players.find((player) => player.userId === publicState?.currentPlayerUserId) ?? null,
     [publicState?.currentPlayerUserId, snapshot.players],
   );
+  const playerNamesById = useMemo(() => {
+    const entries = snapshot.players.map((player) => [player.userId, player.name] as const);
+    return new Map<string, string>(entries);
+  }, [snapshot.players]);
 
   const isMyTurn = publicState?.currentPlayerUserId === viewerUserId;
   const legalMoves = publicState?.legalMoves;
@@ -168,8 +195,21 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
       return [];
     }
 
-    if (myPublicPlayer.hand && myPublicPlayer.hand.length > 0) {
-      return sortHandCards(myPublicPlayer.hand);
+    const handCards = myPublicPlayer.hand ?? [];
+
+    if (handCards.length > 0) {
+      const handAllSameRank = handCards.every((card) => card.rank === handCards[0].rank);
+
+      if (publicState?.drawPileCount === 0 && handAllSameRank) {
+        const handRank = handCards[0].rank;
+        const matchingFaceUp = myPublicPlayer.tableFaceUp.filter((card) => card.rank === handRank);
+
+        if (matchingFaceUp.length > 0) {
+          return sortHandCards([...handCards, ...matchingFaceUp]);
+        }
+      }
+
+      return sortHandCards(handCards);
     }
 
     if (myPublicPlayer.tableFaceUp.length > 0) {
@@ -177,7 +217,7 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
     }
 
     return [];
-  }, [myPublicPlayer]);
+  }, [myPublicPlayer, publicState?.drawPileCount]);
 
   const cardsById = useMemo(() => buildCardIndex(cardsForCurrentTurn), [cardsForCurrentTurn]);
   const selectedCardIdsSafe = useMemo(
@@ -192,13 +232,24 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
   const legalMovesSafe = legalMoves ?? [];
   const canPickup = legalMovesSafe.some((move) => move.type === "pickup");
   const canBlindPlay = legalMovesSafe.some((move) => move.type === "blind_play");
-  const faceUpPickupMoves = legalMovesSafe.filter((move) => move.type === "face_up_pickup");
+  const canPlayNow = publicState?.phase === "active" && Boolean(selectedPlayMove);
 
-  const topDiscard = publicState?.discardPile[publicState.discardPile.length - 1];
-  const playableSourceLabel = myPublicPlayer?.hand && myPublicPlayer.hand.length > 0 ? "Your hand" : "Your face-up table cards";
+  const playableSourceLabel =
+    myPublicPlayer?.hand && myPublicPlayer.hand.length > 0
+      ? publicState?.drawPileCount === 0
+        ? "Your playable cards"
+        : "Your hand"
+      : "Your face-up table cards";
   const specialEffectBadge = getSpecialEffectBadge(publicState, snapshot.events);
   const latestBlindOutcome = useMemo(() => getLatestBlindPlayOutcome(snapshot.events), [snapshot.events]);
   const roundFinishSummary = useMemo(() => getRoundFinishSummary(publicState, snapshot.players), [publicState, snapshot.players]);
+  const roundFinishKey = (() => {
+    if (!roundFinishSummary || publicState?.phase !== "finished") {
+      return null;
+    }
+
+    return `${publicState.turnNumber}:${roundFinishSummary.winnerName}:${roundFinishSummary.loserName}`;
+  })();
   const latestMoveEvent = useMemo(
     () => [...snapshot.events].reverse().find((event) => event.type === "move_applied") ?? null,
     [snapshot.events],
@@ -234,29 +285,79 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
     return single ? [single] : [];
   }, [cardsById, draggingCardId, selectedPlayMove]);
 
+  function clearBlindFxTimers() {
+    if (blindRevealTimerRef.current) {
+      clearTimeout(blindRevealTimerRef.current);
+      blindRevealTimerRef.current = null;
+    }
+
+    if (blindResolveTimerRef.current) {
+      clearTimeout(blindResolveTimerRef.current);
+      blindResolveTimerRef.current = null;
+    }
+  }
+
+  useEffect(
+    () => () => {
+      clearBlindFxTimers();
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (!blindFxAwaitingResult || !latestBlindOutcome) {
+    if (!didBootstrapBlindEventRef.current) {
+      didBootstrapBlindEventRef.current = true;
+
+      lastShownBlindEventIdRef.current = latestBlindOutcome?.eventId ?? null;
+
       return;
     }
 
-    if (blindFxResolvedEventId === latestBlindOutcome.eventId) {
+    if (!latestBlindOutcome) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      setBlindFxResolvedEventId(latestBlindOutcome.eventId);
-      setBlindFxAwaitingResult(false);
-      setBlindFxOutcome(latestBlindOutcome.status);
-      setBlindFxMessage(latestBlindOutcome.message);
-      setBlindFxCard(latestBlindOutcome.revealedCard);
-      setBlindFxPhase("resolve");
-    }, reduceMotion ? 100 : 420);
+    if (latestBlindOutcome.eventId === lastShownBlindEventIdRef.current) {
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, [blindFxAwaitingResult, blindFxResolvedEventId, latestBlindOutcome, reduceMotion]);
+    clearBlindFxTimers();
+
+    const actorName = snapshot.players.find((player) => player.userId === latestBlindOutcome.actorUserId)?.name ?? "A player";
+    const kickoffTimer = setTimeout(() => {
+      lastShownBlindEventIdRef.current = latestBlindOutcome.eventId;
+      setBlindFxActorName(actorName);
+      setBlindFxVisible(true);
+      setBlindFxOutcome(null);
+      setBlindFxCard(null);
+      setBlindFxPhase("launch");
+      setBlindFxMessage(`${actorName} is playing a blind card...`);
+      blindRevealTimerRef.current = setTimeout(
+        () => {
+          setBlindFxPhase("reveal");
+          setBlindFxMessage(`${actorName} reveals the card...`);
+        },
+        reduceMotion ? 120 : 380,
+      );
+
+      blindResolveTimerRef.current = setTimeout(
+        () => {
+          setBlindFxPhase("resolve");
+          setBlindFxOutcome(latestBlindOutcome.status);
+          setBlindFxCard(latestBlindOutcome.revealedCard);
+          setBlindFxMessage(humanizeEventLine(latestBlindOutcome.message, playerNamesById) ?? latestBlindOutcome.message);
+        },
+        reduceMotion ? 260 : 860,
+      );
+    }, 0);
+
+    return () => {
+      clearTimeout(kickoffTimer);
+    };
+  }, [latestBlindOutcome, playerNamesById, reduceMotion, snapshot.players]);
 
   useEffect(() => {
-    if (!blindFxVisible || blindFxAwaitingResult || blindFxPhase !== "resolve") {
+    if (!blindFxVisible || blindFxPhase !== "resolve") {
       return;
     }
 
@@ -266,25 +367,24 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
         setBlindFxOutcome(null);
         setBlindFxMessage(null);
         setBlindFxCard(null);
+        setBlindFxActorName(null);
       },
       reduceMotion ? 1000 : 2300,
     );
 
     return () => clearTimeout(hideTimer);
-  }, [blindFxAwaitingResult, blindFxPhase, blindFxVisible, reduceMotion]);
+  }, [blindFxPhase, blindFxVisible, reduceMotion]);
 
   useEffect(() => {
-    if (!roundFinishSummary || publicState?.phase !== "finished") {
+    if (!roundFinishKey) {
       return;
     }
 
-    const key = `${publicState.turnNumber}:${roundFinishSummary.winnerName}:${roundFinishSummary.loserName}`;
-
-    if (roundFxKeyRef.current === key) {
+    if (roundFxKeyRef.current === roundFinishKey) {
       return;
     }
 
-    roundFxKeyRef.current = key;
+    roundFxKeyRef.current = roundFinishKey;
 
     const showTimer = setTimeout(() => {
       setRoundFxVisible(true);
@@ -301,42 +401,10 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
       clearTimeout(showTimer);
       clearTimeout(hideTimer);
     };
-  }, [publicState?.phase, publicState?.turnNumber, reduceMotion, roundFinishSummary]);
+  }, [roundFinishKey]);
 
-  async function submitMove(move: { type: "play"; cardIds: string[] } | { type: "pickup" } | { type: "blind_play" } | { type: "face_up_pickup"; cardId: string }) {
+  async function submitMove(move: { type: "play"; cardIds: string[] } | { type: "pickup" } | { type: "blind_play" }) {
     setSelectedCardIds([]);
-
-    if (move.type === "blind_play") {
-      blindFxTokenRef.current += 1;
-      const token = blindFxTokenRef.current;
-
-      setBlindFxVisible(true);
-      setBlindFxPhase("launch");
-      setBlindFxOutcome(null);
-      setBlindFxMessage("Reaching for a face-down card...");
-      setBlindFxCard(null);
-      setBlindFxAwaitingResult(true);
-
-      const revealTimer = setTimeout(
-        () => {
-          if (blindFxTokenRef.current !== token) {
-            return;
-          }
-
-          setBlindFxPhase("reveal");
-          setBlindFxMessage("Revealing blind card...");
-        },
-        reduceMotion ? 60 : 220,
-      );
-
-      try {
-        await onSubmitMove(move);
-      } finally {
-        clearTimeout(revealTimer);
-      }
-
-      return;
-    }
 
     await onSubmitMove(move);
   }
@@ -399,7 +467,28 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
   }
 
   if (isWaitingLobby) {
-    return <WaitingLobbyView snapshot={snapshot} />;
+    return (
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0">
+          <WaitingLobbyView snapshot={snapshot} />
+        </div>
+        <GameSidebar
+          snapshot={snapshot}
+          publicState={publicState}
+          isRefreshing={isRefreshing}
+          isSubmittingMove={isSubmittingMove}
+          error={error}
+          viewerUserId={viewerUserId}
+          markReadyAction={markReadyAction}
+          markNotReadyAction={markNotReadyAction}
+          leaveLobbyAction={leaveLobbyAction}
+          startGameAction={startGameAction}
+          beginTurnsAction={beginTurnsAction}
+          closeLobbyAction={closeLobbyAction}
+          exportGameAction={exportGameAction}
+        />
+      </div>
+    );
   }
 
   if (!publicState) {
@@ -415,8 +504,8 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
       onDragCancel={onDragCancel}
       onDragEnd={(event) => void onDragEnd(event)}
     >
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <section className="space-y-4 rounded-2xl border border-zinc-200 bg-[radial-gradient(circle_at_top,#ecfeff,#f8fafc_45%,#ffffff)] p-4 shadow-sm">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[1fr_320px]">
+        <section className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-[radial-gradient(circle_at_top,#ecfeff,#f8fafc_45%,#ffffff)] p-4 shadow-sm">
           <TurnBanner
             currentPlayerName={currentPlayer?.name ?? null}
             isMyTurn={isMyTurn}
@@ -447,17 +536,14 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
               ))}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DiscardPileDropZone
-              count={publicState.discardPileSize}
-              topRank={topDiscard?.rank}
-              topSuit={topDiscard?.suit}
-              enabled={isMyTurn && publicState.phase === "active" && !isSubmittingMove}
-              isLegalDragOver={isDiscardLegalHover}
-              isPulseActive={burnPulse}
-            />
-            <DrawPile count={publicState.drawPileCount} />
-          </div>
+          <CenterPilesPanel
+            drawCount={publicState.drawPileCount}
+            discardPile={publicState.discardPile}
+            enabled={isMyTurn && publicState.phase === "active" && !isSubmittingMove}
+            isLegalDragOver={isDiscardLegalHover}
+            isPulseActive={burnPulse}
+            burnedPileHistory={publicState.burnedPileHistory ?? []}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             {specialEffectBadge ? (
@@ -507,13 +593,13 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
               const isHighlighted = selectedRank ? card.rank === selectedRank : isLegal;
               const draggable = canDragCard({
                 cardId: card.id,
-                isMyTurn,
+                canPlayNow: publicState?.phase === "active",
                 isSubmitting: isSubmittingMove,
                 selectedCardIds: selectedCardIdsSafe,
                 legalPlayKeys,
                 playableCardIds,
               });
-              const isCardDisabled = !isMyTurn || !isLegal || isSubmittingMove;
+              const isCardDisabled = !isLegal || isSubmittingMove || publicState?.phase !== "active";
 
               return (
                 <DraggablePlayableCard
@@ -546,7 +632,7 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
           />
 
           <MoveActionBar
-            canPlaySelected={Boolean(selectedPlayMove) && isMyTurn && publicState.phase === "active"}
+            canPlaySelected={canPlayNow}
             canPickup={canPickup && isMyTurn && publicState.phase === "active"}
             canBlindPlay={canBlindPlay && isMyTurn && publicState.phase === "active"}
             isSubmitting={isSubmittingMove}
@@ -565,36 +651,25 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
               void submitMove({ type: "blind_play" });
             }}
           />
-
-          {faceUpPickupMoves.length > 0 && isMyTurn ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p className="text-sm font-medium text-amber-900">Face-up fallback pickup</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {faceUpPickupMoves.map((move) => (
-                  <button
-                    key={move.cardId}
-                    type="button"
-                    disabled={isSubmittingMove}
-                    onClick={() => {
-                      void submitMove({ type: "face_up_pickup", cardId: move.cardId });
-                    }}
-                    className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs text-amber-900"
-                  >
-                    Pickup with {move.cardId}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </section>
 
-        <GameSidebar
-          snapshot={snapshot}
-          publicState={publicState}
-          isRefreshing={isRefreshing}
-          isSubmittingMove={isSubmittingMove}
-          error={error}
-        />
+        <div className="min-w-0">
+          <GameSidebar
+            snapshot={snapshot}
+            publicState={publicState}
+            isRefreshing={isRefreshing}
+            isSubmittingMove={isSubmittingMove}
+            error={error}
+            viewerUserId={viewerUserId}
+            markReadyAction={markReadyAction}
+            markNotReadyAction={markNotReadyAction}
+            leaveLobbyAction={leaveLobbyAction}
+            startGameAction={startGameAction}
+            beginTurnsAction={beginTurnsAction}
+            closeLobbyAction={closeLobbyAction}
+            exportGameAction={exportGameAction}
+          />
+        </div>
       </div>
 
       <DragOverlay>
@@ -622,6 +697,7 @@ export function OnlineGameTable({ snapshot, viewerUserId, isRefreshing, isSubmit
         phase={blindFxPhase}
         outcome={blindFxOutcome}
         message={blindFxMessage}
+        actorName={blindFxActorName}
         revealedCard={blindFxCard}
         reduceMotion={Boolean(reduceMotion)}
       />

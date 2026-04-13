@@ -16,6 +16,12 @@ export default async function OnlinePlayPage() {
         <p className="mt-2 text-sm text-zinc-600">Create or join invite-only online Shithead lobbies.</p>
 
         <form action={createOnlineLobbyAction} className="mt-4">
+          {user.role === "ADMIN" ? (
+            <label className="mb-3 flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" name="debugShortDeck" value="1" className="size-4 rounded border-zinc-300" />
+              Use short deck (faster debug rounds)
+            </label>
+          ) : null}
           <button
             type="submit"
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"

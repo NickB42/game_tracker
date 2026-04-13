@@ -15,9 +15,9 @@ export function PlayerHand({ cards, renderCard, sourceLabel = "Your cards" }: Pl
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-3">
+    <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4">
       <p className="text-xs uppercase tracking-wide text-zinc-500">{sourceLabel}</p>
-      <div className="mt-3 flex snap-x items-end gap-2 overflow-x-auto pb-2">
+      <div className="mt-4 flex max-w-full snap-x items-end gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 pt-4 [scrollbar-width:thin]">
         {cards.length > 0 ? (
           cards.map((card, index) => {
             const center = (cards.length - 1) / 2;
@@ -26,6 +26,7 @@ export function PlayerHand({ cards, renderCard, sourceLabel = "Your cards" }: Pl
             return (
               <motion.div
                 key={card.id}
+                className="shrink-0 snap-start"
                 layout
                 initial={reduceMotion ? undefined : { opacity: 0, y: 8 }}
                 animate={
