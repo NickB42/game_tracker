@@ -63,6 +63,7 @@ export type MoveResolution = {
   burned: boolean;
   pickedUp: boolean;
   nextTurnSeatIndex: number;
+  revealedBlindCard?: Card;
 };
 
 const rankIndex = new Map<CardRank, number>(RANKS_ASC.map((rank, index) => [rank, index]));
@@ -371,9 +372,22 @@ function cardCombinationsByRank(cards: Card[]): Card[][] {
 
   const combinations: Card[][] = [];
 
+  function collectCombinations(cardsOfRank: Card[], size: number, start: number, selected: Card[]) {
+    if (selected.length === size) {
+      combinations.push([...selected]);
+      return;
+    }
+
+    for (let index = start; index <= cardsOfRank.length - (size - selected.length); index += 1) {
+      selected.push(cardsOfRank[index]);
+      collectCombinations(cardsOfRank, size, index + 1, selected);
+      selected.pop();
+    }
+  }
+
   for (const rankCards of byRank.values()) {
     for (let size = 1; size <= rankCards.length; size += 1) {
-      combinations.push(rankCards.slice(0, size));
+      collectCombinations(rankCards, size, 0, []);
     }
   }
 
@@ -738,6 +752,7 @@ export function applyMove(
         burned: post.burned,
         pickedUp: false,
         nextTurnSeatIndex: next.currentPlayerSeatIndex,
+        revealedBlindCard: flipped,
       };
     }
 
@@ -757,6 +772,7 @@ export function applyMove(
       burned: false,
       pickedUp: true,
       nextTurnSeatIndex: player.seatIndex,
+      revealedBlindCard: flipped,
     };
   }
 

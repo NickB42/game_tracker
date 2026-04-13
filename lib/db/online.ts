@@ -213,6 +213,15 @@ function buildPublicStateForViewer(envelope: PersistedGameEnvelope, viewerUserId
   };
 }
 
+function getWinnerUserIdFromEnvelope(envelope: PersistedGameEnvelope): string | null {
+  if (envelope.game.eliminationOrder.length > 0) {
+    return envelope.game.eliminationOrder[0] ?? null;
+  }
+
+  const winner = envelope.game.players.find((player) => player.placement === 1);
+  return winner?.userId ?? null;
+}
+
 async function syncOnlineGamePlayers(db: Db, gameId: string, envelope: PersistedGameEnvelope) {
   for (const player of envelope.game.players) {
     await db.onlineGamePlayer.updateMany({
@@ -738,6 +747,7 @@ export async function applyOnlineMove(userId: string, lobbyId: string, move: Pla
         move,
         events: resolution.events,
         moveNumber: game.moveNumber + 1,
+        blindRevealedCard: resolution.revealedBlindCard ?? null,
       },
     });
 
@@ -790,6 +800,66 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
   if (!lobby) {
     throw new Error("Lobby not found.");
   }
+
+  const finishedGames = await prisma.onlineGame.findMany({
+    where: {
+      lobbyId,
+      status: "FINISHED",
+    },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: {
+      privateStateJson: true,
+    },
+  });
+
+  const winsByUserId = new Map<string, number>();
+  const totalFinishedRounds = finishedGames.length;
+  let lastWinnerUserId: string | null = null;
+
+  for (const [index, game] of finishedGames.entries()) {
+    const winnerUserId = getWinnerUserIdFromEnvelope(getEnvelope(game.privateStateJson));
+
+    if (!winnerUserId) {
+      continue;
+    }
+
+    if (index === 0) {
+      lastWinnerUserId = winnerUserId;
+    }
+
+    winsByUserId.set(winnerUserId, (winsByUserId.get(winnerUserId) ?? 0) + 1);
+  }
+
+  const leaderboardUserIds = [...winsByUserId.keys()];
+  const leaderboardUsers =
+    leaderboardUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: {
+            id: { in: leaderboardUserIds },
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      : [];
+
+  const lobbyLeaderboard = leaderboardUserIds
+    .map((userId) => ({
+      userId,
+      name: leaderboardUsers.find((user) => user.id === userId)?.name ?? "Unknown",
+      wins: winsByUserId.get(userId) ?? 0,
+      winRate: totalFinishedRounds > 0 ? ((winsByUserId.get(userId) ?? 0) / totalFinishedRounds) * 100 : 0,
+    }))
+    .sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name));
+
+  const lobbyLastWinner = lastWinnerUserId
+    ? {
+        userId: lastWinnerUserId,
+        name: leaderboardUsers.find((user) => user.id === lastWinnerUserId)?.name ?? "Unknown",
+      }
+    : null;
 
   const latestGame = lobby.games[0] ?? null;
   const persisted = latestGame ? getEnvelope(latestGame.privateStateJson) : null;
@@ -846,6 +916,9 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
         payload: event.payloadJson,
         createdAt: event.createdAt,
       })),
+    lobbyLeaderboard,
+    lobbyRoundsPlayed: totalFinishedRounds,
+    lobbyLastWinner,
   };
 }
 

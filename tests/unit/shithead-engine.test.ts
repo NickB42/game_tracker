@@ -181,6 +181,21 @@ test("turn source transitions to face-up when hand empty and stock empty", () =>
   assert.equal(legal.some((move) => move.type === "face_up_pickup"), true);
 });
 
+test("duplicate same-rank hand cards allow either single card play", () => {
+  const game = state({
+    players: [
+      player("u1", 0, [card("h7a", "7"), card("h7b", "7")]),
+      player("u2", 1, [card("x1", "4")]),
+    ],
+    currentPlayerSeatIndex: 0,
+  });
+
+  const legal = getLegalMoves(game);
+
+  assert.equal(legal.some((move) => move.type === "play" && move.cardIds.length === 1 && move.cardIds[0] === "h7a"), true);
+  assert.equal(legal.some((move) => move.type === "play" && move.cardIds.length === 1 && move.cardIds[0] === "h7b"), true);
+});
+
 test("blind face-down illegal card forces pickup including flipped card", () => {
   const game = state({
     players: [player("u1", 0, [], [], [card("fd1", "4")]), player("u2", 1, [card("x1", "9")])],
@@ -191,6 +206,7 @@ test("blind face-down illegal card forces pickup including flipped card", () => 
 
   const result = applyMove(game, "u1", { type: "blind_play" }, () => 0);
   assert.equal(result.pickedUp, true);
+  assert.equal(result.revealedBlindCard?.id, "fd1");
   assert.equal(result.state.players[0].hand.some((entry) => entry.id === "fd1"), true);
   assert.equal(result.state.currentPlayerSeatIndex, 0);
 });

@@ -67,7 +67,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
           <form action={setOnlineLobbyReadyAction.bind(null, lobbyId, !me.readyState)}>
             <button
               type="submit"
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
             >
               {me.readyState ? "Mark not ready" : "Mark ready"}
             </button>
@@ -76,7 +76,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
           <form action={leaveOnlineLobbyAction.bind(null, lobbyId)}>
             <button
               type="submit"
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
             >
               Leave lobby
             </button>
@@ -87,7 +87,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
               <button
                 type="submit"
                 disabled={!allActivePlayersReady}
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {snapshot.lobby.status === "FINISHED" ? "Start next round" : "Start game"}
               </button>
@@ -99,7 +99,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
               <button
                 type="submit"
                 disabled={!allPlayersLockedSwap}
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Begin turns
               </button>
@@ -110,7 +110,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
             <form action={closeOnlineLobbyAction.bind(null, lobbyId)}>
               <button
                 type="submit"
-                className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 active:scale-[0.98]"
               >
                 Close lobby
               </button>
@@ -121,7 +121,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
             <form action={exportOnlineGameAction.bind(null, lobbyId)}>
               <button
                 type="submit"
-                className="rounded-lg border border-green-300 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50"
+                className="rounded-lg border border-green-300 px-3 py-2 text-sm font-medium text-green-700 transition hover:bg-green-50 active:scale-[0.98]"
               >
                 Export to tracker
               </button>
