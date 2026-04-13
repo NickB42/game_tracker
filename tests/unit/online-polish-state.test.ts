@@ -13,9 +13,10 @@ import type { LobbySnapshot } from "@/components/online/types";
 function makeMoveEvent(input: {
   id: string;
   actorUserId?: string | null;
-  moveType: "play" | "pickup" | "blind_play" | "face_up_pickup";
+  moveType: "play" | "pickup" | "blind_play";
   engineEvents?: string[];
   blindRevealedCard?: { rank: string; suit: string } | null;
+  moveNumber?: number;
 }): LobbySnapshot["events"][number] {
   return {
     id: input.id,
@@ -26,6 +27,7 @@ function makeMoveEvent(input: {
       move: { type: input.moveType },
       events: input.engineEvents ?? [],
       blindRevealedCard: input.blindRevealedCard ?? null,
+      moveNumber: input.moveNumber ?? 1,
     },
   };
 }
@@ -37,7 +39,7 @@ test("summarizeLobbyEvent renders player-friendly move title", () => {
   );
 
   assert.equal(summary.title, "Alice played blind");
-  assert.equal(summary.detail, "u1 randomly flipped and played 8.");
+  assert.equal(summary.detail, "Alice randomly flipped and played 8.");
   assert.equal(summary.tone, "info");
 });
 
@@ -109,11 +111,15 @@ test("getLatestBlindPlayOutcome detects success and pickup variants", () => {
     makeMoveEvent({
       id: "e6",
       moveType: "blind_play",
+      actorUserId: "u1",
       engineEvents: ["u1 randomly flipped and played 9."],
       blindRevealedCard: { rank: "9", suit: "S" },
+      moveNumber: 12,
     }),
   ]);
   assert.equal(success?.status, "success");
+  assert.equal(success?.actorUserId, "u1");
+  assert.equal(success?.moveNumber, 12);
   assert.deepEqual(success?.revealedCard, { rank: "9", suit: "S" });
 
   const pickup = getLatestBlindPlayOutcome([
@@ -125,6 +131,7 @@ test("getLatestBlindPlayOutcome detects success and pickup variants", () => {
     }),
   ]);
   assert.equal(pickup?.status, "pickup");
+  assert.equal(pickup?.actorUserId, "u1");
   assert.deepEqual(pickup?.revealedCard, { rank: "4", suit: "H" });
 });
 

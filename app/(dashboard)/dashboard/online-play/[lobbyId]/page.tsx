@@ -33,7 +33,6 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
 
   const me = snapshot.players.find((player) => player.userId === user.id);
   const isOwner = snapshot.lobby.ownerUserId === user.id;
-  const allActivePlayersReady = snapshot.players.length >= 2 && snapshot.players.every((player) => player.readyState);
   const shouldLiveRefresh = snapshot.lobby.status === "WAITING" || snapshot.lobby.status === "IN_PROGRESS";
   const swapLockedUserIds = snapshot.game?.publicState?.swapLockedUserIds ?? [];
   const allPlayersLockedSwap =
@@ -41,6 +40,13 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
   const myHand = snapshot.game?.publicState?.players.find((player) => player.userId === user.id)?.hand ?? [];
   const myFaceUp = snapshot.game?.publicState?.players.find((player) => player.userId === user.id)?.tableFaceUp ?? [];
   const myVisibleCards = [...myHand, ...myFaceUp];
+  const markReadyFormAction = setOnlineLobbyReadyAction.bind(null, lobbyId, true);
+  const markNotReadyFormAction = setOnlineLobbyReadyAction.bind(null, lobbyId, false);
+  const leaveLobbyFormAction = leaveOnlineLobbyAction.bind(null, lobbyId);
+  const startGameFormAction = startOnlineLobbyGameAction.bind(null, lobbyId);
+  const beginTurnsFormAction = beginOnlineTurnsAction.bind(null, lobbyId);
+  const closeLobbyFormAction = closeOnlineLobbyAction.bind(null, lobbyId);
+  const exportGameFormAction = exportOnlineGameAction.bind(null, lobbyId);
 
   async function submitSwapFormAction(formData: FormData) {
     "use server";
@@ -55,96 +61,20 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
     <section className="space-y-6" data-testid="online-lobby-page">
       <LobbyPageRevalidator enabled={shouldLiveRefresh} />
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <Link href="/dashboard/online-play" className="text-sm text-zinc-700 underline">
-          Back to online lobbies
-        </Link>
+      <Link href="/dashboard/online-play" className="text-sm text-zinc-700 underline">
+        Back to online lobbies
+      </Link>
 
-        <h1 className="mt-3 text-2xl font-semibold text-zinc-900">Lobby {snapshot.lobby.code}</h1>
-        <p className="mt-1 text-sm text-zinc-600">Share this code with authenticated users to join.</p>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <form action={setOnlineLobbyReadyAction.bind(null, lobbyId, !me.readyState)}>
-            <button
-              type="submit"
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
-            >
-              {me.readyState ? "Mark not ready" : "Mark ready"}
-            </button>
-          </form>
-
-          <form action={leaveOnlineLobbyAction.bind(null, lobbyId)}>
-            <button
-              type="submit"
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
-            >
-              Leave lobby
-            </button>
-          </form>
-
-          {isOwner && (snapshot.lobby.status === "WAITING" || snapshot.lobby.status === "FINISHED") ? (
-            <form action={startOnlineLobbyGameAction.bind(null, lobbyId)}>
-              <button
-                type="submit"
-                disabled={!allActivePlayersReady}
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {snapshot.lobby.status === "FINISHED" ? "Start next round" : "Start game"}
-              </button>
-            </form>
-          ) : null}
-
-          {isOwner && snapshot.game?.publicState?.phase === "swap" ? (
-            <form action={beginOnlineTurnsAction.bind(null, lobbyId)}>
-              <button
-                type="submit"
-                disabled={!allPlayersLockedSwap}
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Begin turns
-              </button>
-            </form>
-          ) : null}
-
-          {isOwner ? (
-            <form action={closeOnlineLobbyAction.bind(null, lobbyId)}>
-              <button
-                type="submit"
-                className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 active:scale-[0.98]"
-              >
-                Close lobby
-              </button>
-            </form>
-          ) : null}
-
-          {snapshot.game?.status === "FINISHED" ? (
-            <form action={exportOnlineGameAction.bind(null, lobbyId)}>
-              <button
-                type="submit"
-                className="rounded-lg border border-green-300 px-3 py-2 text-sm font-medium text-green-700 transition hover:bg-green-50 active:scale-[0.98]"
-              >
-                Export to tracker
-              </button>
-            </form>
-          ) : null}
-        </div>
-
-        {(snapshot.lobby.status === "WAITING" || snapshot.lobby.status === "FINISHED") && !allActivePlayersReady ? (
-          <p className="mt-3 text-xs text-amber-700">All players must mark ready before the owner can start a round.</p>
-        ) : null}
-
-        {snapshot.game?.publicState?.phase === "swap" ? (
-          <p className="mt-2 text-xs text-zinc-600">
+      {snapshot.game?.publicState?.phase === "swap" ? (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-zinc-600">
             Swap lock progress: {swapLockedUserIds.length}/{snapshot.players.length} players locked their face-up selection.
           </p>
-        ) : null}
+          {isOwner && !allPlayersLockedSwap ? (
+            <p className="mt-2 text-xs text-amber-700">Every player must save their 3 face-up cards before turns can begin.</p>
+          ) : null}
 
-        {isOwner && snapshot.game?.publicState?.phase === "swap" && !allPlayersLockedSwap ? (
-          <p className="mt-2 text-xs text-amber-700">Every player must save their 3 face-up cards before you can begin turns.</p>
-        ) : null}
-
-        {snapshot.game?.publicState?.phase === "swap" ? (
-          <form action={submitSwapFormAction} className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <form action={submitSwapFormAction} className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
             <p className="text-sm font-medium text-zinc-800">Choose your 3 face-up cards</p>
             <p className="mt-1 text-xs text-zinc-600">
               You can see 6 cards here. Select exactly 3 to place face-up. The remaining 3 become your hand.
@@ -174,10 +104,21 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
               Save face-up selection
             </button>
           </form>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      <LobbyLiveView lobbyId={lobbyId} viewerUserId={user.id} initialSnapshot={snapshot} />
+      <LobbyLiveView
+        lobbyId={lobbyId}
+        viewerUserId={user.id}
+        initialSnapshot={snapshot}
+        markReadyAction={markReadyFormAction}
+        markNotReadyAction={markNotReadyFormAction}
+        leaveLobbyAction={leaveLobbyFormAction}
+        startGameAction={startGameFormAction}
+        beginTurnsAction={beginTurnsFormAction}
+        closeLobbyAction={closeLobbyFormAction}
+        exportGameAction={exportGameFormAction}
+      />
     </section>
   );
 }

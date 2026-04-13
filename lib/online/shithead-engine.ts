@@ -38,6 +38,7 @@ export type GameState = {
   drawPile: Card[];
   discardPile: Card[];
   burnedCards: Card[];
+  burnedPileHistory: Card[][];
   currentPlayerSeatIndex: number;
   turnNumber: number;
   phase: "swap" | "active" | "finished";
@@ -48,14 +49,12 @@ export type GameState = {
 export type PlayerMove =
   | { type: "play"; cardIds: string[] }
   | { type: "pickup" }
-  | { type: "blind_play" }
-  | { type: "face_up_pickup"; cardId: string };
+  | { type: "blind_play" };
 
 export type LegalMove =
   | { type: "play"; cardIds: string[] }
   | { type: "pickup" }
-  | { type: "blind_play" }
-  | { type: "face_up_pickup"; cardId: string };
+  | { type: "blind_play" };
 
 export type MoveResolution = {
   state: GameState;
@@ -64,6 +63,8 @@ export type MoveResolution = {
   pickedUp: boolean;
   nextTurnSeatIndex: number;
   revealedBlindCard?: Card;
+  playedCards?: Card[];
+  burnedPileCards?: Card[];
 };
 
 const rankIndex = new Map<CardRank, number>(RANKS_ASC.map((rank, index) => [rank, index]));
@@ -96,6 +97,7 @@ export function cloneState(state: GameState): GameState {
     drawPile: state.drawPile.map(cloneCard),
     discardPile: state.discardPile.map(cloneCard),
     burnedCards: state.burnedCards.map(cloneCard),
+    burnedPileHistory: state.burnedPileHistory.map((pile) => pile.map(cloneCard)),
     eliminationOrder: [...state.eliminationOrder],
   };
 }
@@ -135,7 +137,15 @@ function assertPlayerCount(userIds: string[]) {
   }
 }
 
-export function createInitialGameState(userIdsInSeatOrder: string[], randomFn?: (maxExclusive: number) => number): GameState {
+type CreateInitialGameStateOptions = {
+  debugShortDeck?: boolean;
+};
+
+export function createInitialGameState(
+  userIdsInSeatOrder: string[],
+  randomFn?: (maxExclusive: number) => number,
+  options?: CreateInitialGameStateOptions,
+): GameState {
   assertPlayerCount(userIdsInSeatOrder);
 
   const deck = shuffleDeck(createDeck(), randomFn);
@@ -166,11 +176,15 @@ export function createInitialGameState(userIdsInSeatOrder: string[], randomFn?: 
     });
   }
 
+  const defaultDrawPile = deck.slice(cursor);
+  const drawPile = options?.debugShortDeck ? defaultDrawPile.slice(0, 10) : defaultDrawPile;
+
   return {
     players,
-    drawPile: deck.slice(cursor),
+    drawPile,
     discardPile: [],
     burnedCards: [],
+    burnedPileHistory: [],
     currentPlayerSeatIndex: 0,
     turnNumber: 1,
     phase: "swap",
@@ -299,6 +313,32 @@ function getTurnSource(state: GameState, player: PlayerGameState): TurnSource {
   return "hand";
 }
 
+function canCombineHandWithFaceUp(state: GameState, player: PlayerGameState): {
+  enabled: boolean;
+  handRank: CardRank | null;
+} {
+  if (state.drawPile.length > 0 || player.hand.length === 0 || player.tableFaceUp.length === 0) {
+    return { enabled: false, handRank: null };
+  }
+
+  const handRank = player.hand[0]?.rank ?? null;
+
+  if (!handRank) {
+    return { enabled: false, handRank: null };
+  }
+
+  if (!player.hand.every((card) => card.rank === handRank)) {
+    return { enabled: false, handRank: null };
+  }
+
+  const hasMatchingFaceUp = player.tableFaceUp.some((card) => card.rank === handRank);
+
+  return {
+    enabled: hasMatchingFaceUp,
+    handRank,
+  };
+}
+
 export function getEffectivePileState(discardPile: Card[]): EffectivePileState {
   let latestNonThree: Card | null = null;
 
@@ -394,16 +434,131 @@ function cardCombinationsByRank(cards: Card[]): Card[][] {
   return combinations;
 }
 
-function toMoveKey(cardIds: string[]): string {
-  return cardIds.slice().sort().join("|");
+function combinationsOfSize(cards: Card[], size: number): Card[][] {
+  const results: Card[][] = [];
+
+  function collect(start: number, selected: Card[]) {
+    if (selected.length === size) {
+      results.push([...selected]);
+      return;
+    }
+
+    for (let index = start; index <= cards.length - (size - selected.length); index += 1) {
+      selected.push(cards[index]);
+      collect(index + 1, selected);
+      selected.pop();
+    }
+  }
+
+  if (size <= 0 || size > cards.length) {
+    return results;
+  }
+
+  collect(0, []);
+  return results;
 }
 
-export function getLegalMoves(state: GameState): LegalMove[] {
+function getTopConnectedRankForThrowIn(discardPile: Card[]): { rank: CardRank; count: number } | null {
+  if (discardPile.length === 0) {
+    return null;
+  }
+
+  let anchorRank: CardRank | null = null;
+
+  for (let index = discardPile.length - 1; index >= 0; index -= 1) {
+    const card = discardPile[index];
+
+    if (card.rank !== "3") {
+      anchorRank = card.rank;
+      break;
+    }
+  }
+
+  if (!anchorRank) {
+    return null;
+  }
+
+  let count = 0;
+
+  for (let index = discardPile.length - 1; index >= 0; index -= 1) {
+    const card = discardPile[index];
+
+    if (card.rank === anchorRank) {
+      count += 1;
+      continue;
+    }
+
+    if (card.rank === "3") {
+      continue;
+    }
+
+    break;
+  }
+
+  return {
+    rank: anchorRank,
+    count,
+  };
+}
+
+function getThrowInPlayMoves(state: GameState, actingUserId: string): Array<{ type: "play"; cardIds: string[] }> {
   if (state.phase !== "active") {
     return [];
   }
 
-  const player = getCurrentPlayer(state);
+  const currentPlayer = getCurrentPlayer(state);
+
+  if (currentPlayer.userId === actingUserId) {
+    return [];
+  }
+
+  const actingPlayer = state.players.find((player) => player.userId === actingUserId);
+
+  if (!actingPlayer || actingPlayer.isOut || actingPlayer.isLoser || actingPlayer.hand.length === 0) {
+    return [];
+  }
+
+  const connected = getTopConnectedRankForThrowIn(state.discardPile);
+
+  if (!connected) {
+    return [];
+  }
+
+  const needed = 4 - connected.count;
+
+  if (needed <= 0 || needed > 4) {
+    return [];
+  }
+
+  const matching = actingPlayer.hand.filter((card) => card.rank === connected.rank);
+
+  if (matching.length < needed) {
+    return [];
+  }
+
+  return combinationsOfSize(matching, needed).map((cards) => ({
+    type: "play",
+    cardIds: cards.map((card) => card.id),
+  }));
+}
+
+function toMoveKey(cardIds: string[]): string {
+  return cardIds.slice().sort().join("|");
+}
+
+export function getLegalMoves(state: GameState, actingUserId?: string): LegalMove[] {
+  if (state.phase !== "active") {
+    return [];
+  }
+
+  const currentPlayer = getCurrentPlayer(state);
+  const targetUserId = actingUserId ?? currentPlayer.userId;
+
+  if (targetUserId !== currentPlayer.userId) {
+    return getThrowInPlayMoves(state, targetUserId);
+  }
+
+  const player = currentPlayer;
 
   if (player.isOut || player.isLoser) {
     return [];
@@ -416,15 +571,28 @@ export function getLegalMoves(state: GameState): LegalMove[] {
     return player.tableFaceDown.length > 0 ? [{ type: "blind_play" as const }] : [];
   }
 
-  const cards = source === "hand" ? player.hand : player.tableFaceUp;
+  const combineMode = source === "hand" ? canCombineHandWithFaceUp(state, player) : { enabled: false, handRank: null as CardRank | null };
+  const cards =
+    source === "hand"
+      ? combineMode.enabled && combineMode.handRank
+        ? [...player.hand, ...player.tableFaceUp.filter((card) => card.rank === combineMode.handRank)]
+        : player.hand
+      : player.tableFaceUp;
+  const handIds = new Set(player.hand.map((card) => card.id));
   const legal: LegalMove[] = [];
   const seen = new Set<string>();
 
   for (const combo of cardCombinationsByRank(cards)) {
     const representative = combo[0];
+    const isDirectFourBurn = combo.length === 4;
 
-    if (isCardLegalAgainstPile(representative, effectivePile)) {
+    if (isDirectFourBurn || isCardLegalAgainstPile(representative, effectivePile)) {
       const cardIds = combo.map((card) => card.id);
+
+      if (combineMode.enabled && !cardIds.some((id) => handIds.has(id))) {
+        continue;
+      }
+
       const key = toMoveKey(cardIds);
 
       if (!seen.has(key)) {
@@ -439,8 +607,10 @@ export function getLegalMoves(state: GameState): LegalMove[] {
   }
 
   if (source === "face_up") {
-    for (const card of player.tableFaceUp) {
-      legal.push({ type: "face_up_pickup", cardId: card.id });
+    const hasPlay = legal.some((move) => move.type === "play");
+
+    if (!hasPlay) {
+      legal.push({ type: "pickup" });
     }
   }
 
@@ -576,6 +746,7 @@ export function resolvePostPlayEffects(state: GameState, playedCards: Card[], pr
   burned: boolean;
   skipCount: number;
   events: string[];
+  burnedPileCards: Card[];
 } {
   const events: string[] = [];
 
@@ -584,6 +755,8 @@ export function resolvePostPlayEffects(state: GameState, playedCards: Card[], pr
   const burned = burnByTen || burnBySet;
 
   if (burned) {
+    const burnedPileCards = [...state.discardPile];
+    state.burnedPileHistory.push([...burnedPileCards]);
     state.burnedCards.push(...state.discardPile);
     state.discardPile = [];
     events.push("Pile burned.");
@@ -591,6 +764,7 @@ export function resolvePostPlayEffects(state: GameState, playedCards: Card[], pr
       burned: true,
       skipCount: 0,
       events,
+      burnedPileCards,
     };
   }
 
@@ -604,6 +778,7 @@ export function resolvePostPlayEffects(state: GameState, playedCards: Card[], pr
     burned: false,
     skipCount,
     events,
+    burnedPileCards: [],
   };
 }
 
@@ -631,7 +806,7 @@ export function applyMove(
 ): MoveResolution {
   requireActivePhase(state);
 
-  const legalMoves = getLegalMoves(state);
+  const legalMoves = getLegalMoves(state, actingUserId);
   const legalKeys = new Set(
     legalMoves.map((legal) => {
       if (legal.type === "play") {
@@ -640,10 +815,6 @@ export function applyMove(
 
       if (legal.type === "blind_play") {
         return "blind";
-      }
-
-      if (legal.type === "face_up_pickup") {
-        return `faceup-pickup:${legal.cardId}`;
       }
 
       return "pickup";
@@ -659,10 +830,6 @@ export function applyMove(
       return "blind";
     }
 
-    if (move.type === "face_up_pickup") {
-      return `faceup-pickup:${move.cardId}`;
-    }
-
     return "pickup";
   })();
 
@@ -671,6 +838,48 @@ export function applyMove(
   }
 
   const next = cloneState(state);
+  const currentPlayer = getCurrentPlayer(next);
+
+  if (currentPlayer.userId !== actingUserId) {
+    if (move.type !== "play") {
+      throw new Error("It is not your turn.");
+    }
+
+    const player = next.players.find((entry) => entry.userId === actingUserId);
+
+    if (!player) {
+      throw new Error("Player not found.");
+    }
+
+    const { removed, remaining } = removeCardsById(player.hand, move.cardIds);
+    assertSingleRank(removed);
+
+    player.hand = remaining;
+
+    const burnedPileCards = [...next.discardPile, ...removed];
+    next.burnedCards.push(...burnedPileCards);
+    next.burnedPileHistory.push([...burnedPileCards]);
+    next.discardPile = [];
+    next.drawPile = refillHandFromDraw(player, next.drawPile);
+    next.currentPlayerSeatIndex = player.seatIndex;
+    next.turnNumber += 1;
+
+    const events: string[] = [];
+    events.push(`${actingUserId} threw in ${removed.length}x ${removed[0].rank} and burned the pile.`);
+    events.push("Pile burned.");
+    events.push(...maybeMarkEliminations(next));
+
+    return {
+      state: next,
+      events,
+      burned: true,
+      pickedUp: false,
+      nextTurnSeatIndex: next.currentPlayerSeatIndex,
+      playedCards: removed,
+      burnedPileCards,
+    };
+  }
+
   const player = ensureCurrentPlayer(next, actingUserId);
   const source = getTurnSource(next, player);
   const previousEffective = getEffectivePileState(next.discardPile);
@@ -692,28 +901,7 @@ export function applyMove(
       burned: false,
       pickedUp: true,
       nextTurnSeatIndex: player.seatIndex,
-    };
-  }
-
-  if (move.type === "face_up_pickup") {
-    const { removed, remaining } = removeCardsById(player.tableFaceUp, [move.cardId]);
-    player.tableFaceUp = remaining;
-    next.discardPile.push(...removed);
-    player.hand.push(...next.discardPile);
-    next.discardPile = [];
-
-    next.currentPlayerSeatIndex = player.seatIndex;
-    next.turnNumber += 1;
-
-    events.push(`${actingUserId} placed a face-up card, picked up the pile, and starts a new pile.`);
-    events.push(...maybeMarkEliminations(next));
-
-    return {
-      state: next,
-      events,
-      burned: false,
-      pickedUp: true,
-      nextTurnSeatIndex: player.seatIndex,
+      playedCards: [],
     };
   }
 
@@ -753,6 +941,8 @@ export function applyMove(
         pickedUp: false,
         nextTurnSeatIndex: next.currentPlayerSeatIndex,
         revealedBlindCard: flipped,
+        playedCards: [flipped],
+        burnedPileCards: post.burnedPileCards,
       };
     }
 
@@ -773,6 +963,8 @@ export function applyMove(
       pickedUp: true,
       nextTurnSeatIndex: player.seatIndex,
       revealedBlindCard: flipped,
+      playedCards: [flipped],
+      burnedPileCards: [],
     };
   }
 
@@ -780,11 +972,86 @@ export function applyMove(
     throw new Error("Play move is only allowed from hand or face-up cards.");
   }
 
+  const combineMode = source === "hand" ? canCombineHandWithFaceUp(next, player) : { enabled: false, handRank: null as CardRank | null };
+
+  if (source === "hand" && combineMode.enabled) {
+    const handIds = new Set(player.hand.map((card) => card.id));
+    const faceUpIds = new Set(player.tableFaceUp.map((card) => card.id));
+    const handMoveIds = move.cardIds.filter((id) => handIds.has(id));
+    const faceUpMoveIds = move.cardIds.filter((id) => faceUpIds.has(id));
+
+    if (handMoveIds.length === 0) {
+      throw new Error("Combined move must include at least one hand card.");
+    }
+
+    const { removed: handRemoved, remaining: handRemaining } = removeCardsById(player.hand, handMoveIds);
+    const { removed: faceUpRemoved, remaining: faceUpRemaining } = removeCardsById(player.tableFaceUp, faceUpMoveIds);
+    const removed = [...handRemoved, ...faceUpRemoved];
+    assertSingleRank(removed);
+    const isDirectFourBurn = removed.length === 4;
+
+    if (!isDirectFourBurn && !isCardLegalAgainstPile(removed[0], previousEffective)) {
+      throw new Error("Played card is not legal for the current pile state.");
+    }
+
+    player.hand = handRemaining;
+    player.tableFaceUp = faceUpRemaining;
+
+    if (isDirectFourBurn) {
+      next.burnedCards.push(...removed);
+      next.burnedPileHistory.push([...removed]);
+      next.drawPile = refillHandFromDraw(player, next.drawPile);
+      next.currentPlayerSeatIndex = player.seatIndex;
+      next.turnNumber += 1;
+
+      events.push(`${actingUserId} directly burned 4x ${removed[0].rank}.`);
+      events.push("Pile burned.");
+      events.push(...maybeMarkEliminations(next));
+
+      return {
+        state: next,
+        events,
+        burned: true,
+        pickedUp: false,
+        nextTurnSeatIndex: next.currentPlayerSeatIndex,
+        playedCards: removed,
+        burnedPileCards: removed,
+      };
+    }
+
+    next.discardPile.push(...removed);
+    next.drawPile = refillHandFromDraw(player, next.drawPile);
+
+    const post = resolvePostPlayEffects(next, removed, previousEffective);
+
+    if (!post.burned) {
+      const nextSeat = advanceTurn(next, player.seatIndex, post.skipCount);
+      next.currentPlayerSeatIndex = nextSeat;
+    }
+
+    next.turnNumber += 1;
+
+    events.push(`${actingUserId} played ${removed.length}x ${removed[0].rank}.`);
+    events.push(...post.events);
+    events.push(...maybeMarkEliminations(next));
+
+    return {
+      state: next,
+      events,
+      burned: post.burned,
+      pickedUp: false,
+      nextTurnSeatIndex: next.currentPlayerSeatIndex,
+      playedCards: removed,
+      burnedPileCards: post.burnedPileCards,
+    };
+  }
+
   const cards = source === "hand" ? player.hand : player.tableFaceUp;
   const { removed, remaining } = removeCardsById(cards, move.cardIds);
   assertSingleRank(removed);
+  const isDirectFourBurn = removed.length === 4;
 
-  if (!isCardLegalAgainstPile(removed[0], previousEffective)) {
+  if (!isDirectFourBurn && !isCardLegalAgainstPile(removed[0], previousEffective)) {
     throw new Error("Played card is not legal for the current pile state.");
   }
 
@@ -792,6 +1059,32 @@ export function applyMove(
     player.hand = remaining;
   } else {
     player.tableFaceUp = remaining;
+  }
+
+  if (isDirectFourBurn) {
+    next.burnedCards.push(...removed);
+    next.burnedPileHistory.push([...removed]);
+
+    if (source === "hand") {
+      next.drawPile = refillHandFromDraw(player, next.drawPile);
+    }
+
+    next.currentPlayerSeatIndex = player.seatIndex;
+    next.turnNumber += 1;
+
+    events.push(`${actingUserId} directly burned 4x ${removed[0].rank}.`);
+    events.push("Pile burned.");
+    events.push(...maybeMarkEliminations(next));
+
+    return {
+      state: next,
+      events,
+      burned: true,
+      pickedUp: false,
+      nextTurnSeatIndex: next.currentPlayerSeatIndex,
+      playedCards: removed,
+      burnedPileCards: removed,
+    };
   }
 
   next.discardPile.push(...removed);
@@ -819,6 +1112,8 @@ export function applyMove(
     burned: post.burned,
     pickedUp: false,
     nextTurnSeatIndex: next.currentPlayerSeatIndex,
+    playedCards: removed,
+    burnedPileCards: post.burnedPileCards,
   };
 }
 

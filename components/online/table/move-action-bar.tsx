@@ -43,19 +43,17 @@ export function MoveActionBar({
           Pickup pile
         </button>
 
-        <button
-          type="button"
-          disabled={!canBlindPlay || isSubmitting}
-          onClick={onBlindPlay}
-          className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Play blind card
-        </button>
+        {canBlindPlay ? (
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={onBlindPlay}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Play blind card
+          </button>
+        ) : null}
       </div>
-
-      {canBlindPlay ? (
-        <p className="mt-2 text-xs text-amber-700">Blind play flips a random face-down card and may force a pickup if illegal.</p>
-      ) : null}
     </div>
   );
 }

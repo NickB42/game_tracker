@@ -30,10 +30,12 @@ function parseString(formData: FormData, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export async function createOnlineLobbyAction(): Promise<void> {
+export async function createOnlineLobbyAction(formData: FormData): Promise<void> {
   const user = await requireAuthenticatedUser();
+  const debugShortDeckRequested = formData.get("debugShortDeck") === "1";
+  const debugShortDeck = user.role === "ADMIN" && debugShortDeckRequested;
 
-  const lobby = await createOnlineLobby(user.id);
+  const lobby = await createOnlineLobby(user.id, { debugShortDeck });
 
   revalidatePath("/dashboard/online-play");
   redirect(`/dashboard/online-play/${lobby.id}`);

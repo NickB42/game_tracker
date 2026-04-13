@@ -45,7 +45,7 @@ export function WaitingLobbyView({ snapshot }: WaitingLobbyViewProps) {
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-zinc-500">Use the controls above to ready up, start, leave, or close the lobby.</p>
+      <p className="mt-4 text-xs text-zinc-500">Use the sidebar controls to ready up, start, leave, or close the lobby.</p>
     </section>
   );
 }

@@ -42,11 +42,12 @@ export const onlineMoveSchema = z.object({
     z.object({
       type: z.literal("blind_play"),
     }),
-    z.object({
-      type: z.literal("face_up_pickup"),
-      cardId: z.string().min(2).max(8),
-    }),
   ]),
+});
+
+export const onlineChatMessageSchema = z.object({
+  lobbyId: idSchema,
+  message: z.string().trim().min(1).max(240),
 });
 
 export type JoinLobbyInput = z.infer<typeof joinLobbySchema>;

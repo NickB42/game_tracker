@@ -192,8 +192,9 @@ function nextSeatIndex(players: Array<{ seatIndex: number }>) {
 
 function buildPublicStateForViewer(envelope: PersistedGameEnvelope, viewerUserId: string) {
   const effectivePile = getEffectivePileState(envelope.game.discardPile);
-  const legalMoves = envelope.game.phase === "active" ? getLegalMoves(envelope.game) : [];
+  const legalMoves = envelope.game.phase === "active" ? getLegalMoves(envelope.game, viewerUserId) : [];
   const currentPlayer = envelope.game.players.find((player) => player.seatIndex === envelope.game.currentPlayerSeatIndex);
+  const burnedPileHistory = Array.isArray(envelope.game.burnedPileHistory) ? envelope.game.burnedPileHistory : [];
 
   return {
     phase: envelope.game.phase,
@@ -205,6 +206,7 @@ function buildPublicStateForViewer(envelope: PersistedGameEnvelope, viewerUserId
     discardPileSize: envelope.game.discardPile.length,
     effectivePile,
     burnedCardsCount: envelope.game.burnedCards.length,
+    burnedPileHistory,
     eliminationOrder: envelope.game.eliminationOrder,
     loserUserId: envelope.game.loserUserId,
     swapLockedUserIds: envelope.swapLockedUserIds,
@@ -245,7 +247,32 @@ async function syncOnlineGamePlayers(db: Db, gameId: string, envelope: Persisted
   }
 }
 
-export async function createOnlineLobby(ownerUserId: string) {
+async function getLobbyDebugOptions(db: Db, lobbyId: string): Promise<{ debugShortDeck: boolean }> {
+  const createdEvent = await db.onlineGameEvent.findFirst({
+    where: {
+      lobbyId,
+      type: "lobby_created",
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    select: {
+      payloadJson: true,
+    },
+  });
+
+  if (!createdEvent || !createdEvent.payloadJson || typeof createdEvent.payloadJson !== "object") {
+    return { debugShortDeck: false };
+  }
+
+  const payload = createdEvent.payloadJson as { debugShortDeck?: unknown };
+
+  return {
+    debugShortDeck: payload.debugShortDeck === true,
+  };
+}
+
+export async function createOnlineLobby(ownerUserId: string, options?: { debugShortDeck?: boolean }) {
   return prisma.$transaction(async (tx) => {
     await cleanupExpiredLobbies(tx);
 
@@ -274,7 +301,10 @@ export async function createOnlineLobby(ownerUserId: string) {
           lobbyId: lobby.id,
           actorUserId: ownerUserId,
           type: "lobby_created",
-          payload: { code: lobby.code },
+          payload: {
+            code: lobby.code,
+            debugShortDeck: options?.debugShortDeck === true,
+          },
         });
 
         return lobby;
@@ -442,6 +472,51 @@ export async function setOnlineLobbyReadyState(userId: string, lobbyId: string, 
   });
 }
 
+export async function sendOnlineLobbyChatMessage(userId: string, lobbyId: string, message: string) {
+  const trimmed = message.trim();
+
+  if (!trimmed) {
+    throw new Error("Message cannot be empty.");
+  }
+
+  if (trimmed.length > 240) {
+    throw new Error("Message is too long.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const lobby = await tx.onlineLobby.findUnique({
+      where: { id: lobbyId },
+      select: { id: true, status: true },
+    });
+
+    if (!lobby || lobby.status === "CLOSED") {
+      throw new Error("Lobby not available.");
+    }
+
+    const membership = await tx.onlineLobbyPlayer.findFirst({
+      where: {
+        lobbyId,
+        userId,
+        leftAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!membership) {
+      throw new Error("You are not an active player in this lobby.");
+    }
+
+    await appendEvent(tx, {
+      lobbyId,
+      actorUserId: userId,
+      type: "chat_message",
+      payload: {
+        message: trimmed,
+      },
+    });
+  });
+}
+
 export async function closeOnlineLobby(ownerUserId: string, lobbyId: string) {
   return prisma.$transaction(async (tx) => {
     const lobby = await tx.onlineLobby.findUnique({
@@ -510,7 +585,10 @@ export async function startOnlineLobbyGame(ownerUserId: string, lobbyId: string)
     }
 
     const seatOrderedUserIds = players.map((player) => player.userId);
-    const gameState = createInitialGameState(seatOrderedUserIds);
+    const debugOptions = await getLobbyDebugOptions(tx, lobbyId);
+    const gameState = createInitialGameState(seatOrderedUserIds, undefined, {
+      debugShortDeck: debugOptions.debugShortDeck,
+    });
 
     const envelope: PersistedGameEnvelope = {
       game: gameState,
@@ -748,6 +826,8 @@ export async function applyOnlineMove(userId: string, lobbyId: string, move: Pla
         events: resolution.events,
         moveNumber: game.moveNumber + 1,
         blindRevealedCard: resolution.revealedBlindCard ?? null,
+        playedCards: resolution.playedCards ?? [],
+        burnedPileCards: resolution.burnedPileCards ?? [],
       },
     });
 

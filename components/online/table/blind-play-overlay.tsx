@@ -9,6 +9,7 @@ type BlindPlayOverlayProps = {
   phase: "launch" | "reveal" | "resolve";
   outcome: "success" | "pickup" | null;
   message: string | null;
+  actorName: string | null;
   revealedCard: { rank: string; suit: string } | null;
   reduceMotion: boolean;
 };
@@ -22,7 +23,7 @@ function extractRankFromMessage(message: string | null): string | null {
   return match?.[1]?.toUpperCase() ?? null;
 }
 
-export function BlindPlayOverlay({ visible, phase, outcome, message, revealedCard, reduceMotion }: BlindPlayOverlayProps) {
+export function BlindPlayOverlay({ visible, phase, outcome, message, actorName, revealedCard, reduceMotion }: BlindPlayOverlayProps) {
   const fallbackRank = extractRankFromMessage(message);
   const cardTransition = reduceMotion
     ? ({ duration: 0.15 } as const)
@@ -58,6 +59,7 @@ export function BlindPlayOverlay({ visible, phase, outcome, message, revealedCar
             className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-2xl backdrop-blur"
           >
             <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">Blind play</p>
+            <p className="mt-1 text-center text-xs font-medium text-zinc-700">{actorName ?? "A player"}</p>
 
             <div className="mt-3 flex items-center justify-center">
               <motion.div

@@ -38,12 +38,12 @@ export type LobbySnapshot = {
         resetByTwo: boolean;
       };
       burnedCardsCount?: number;
+      burnedPileHistory?: Array<Array<{ id: string; rank: string; suit: string }>>;
       eliminationOrder?: string[];
       legalMoves: Array<
         | { type: "play"; cardIds: string[] }
         | { type: "pickup" }
         | { type: "blind_play" }
-        | { type: "face_up_pickup"; cardId: string }
       >;
       players: Array<{
         userId: string;

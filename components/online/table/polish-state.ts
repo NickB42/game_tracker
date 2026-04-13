@@ -20,6 +20,8 @@ export type TableEffectBadge = {
 
 export type BlindPlayOutcome = {
   eventId: string;
+  actorUserId: string | null;
+  moveNumber: number | null;
   status: "success" | "pickup";
   message: string;
   revealedCard: {
@@ -73,10 +75,24 @@ function firstEngineEvent(payload: unknown): string | null {
   return parsed.events[0] ?? null;
 }
 
+export function humanizeEventLine(line: string | null, playerNamesById: Map<string, string>): string | null {
+  if (!line) {
+    return null;
+  }
+
+  let result = line;
+
+  for (const [userId, name] of playerNamesById.entries()) {
+    result = result.replaceAll(userId, name);
+  }
+
+  return result;
+}
+
 export function summarizeLobbyEvent(event: LobbyEvent, playerNamesById: Map<string, string>): EventSummary {
   const actor = actorNameOf(event, playerNamesById);
   const time = formatEventTime(event.createdAt);
-  const engineLine = firstEngineEvent(event.payload);
+  const engineLine = humanizeEventLine(firstEngineEvent(event.payload), playerNamesById);
 
   if (event.type === "move_applied") {
     const parsed = parseMovePayload(event.payload);
@@ -242,8 +258,9 @@ export function getLatestBlindPlayOutcome(events: LobbySnapshot["events"]): Blin
   }
 
   const parsed = parseMovePayload(latestBlind.payload);
-  const payload = latestBlind.payload as { blindRevealedCard?: { rank?: unknown; suit?: unknown } };
+  const payload = latestBlind.payload as { blindRevealedCard?: { rank?: unknown; suit?: unknown }; moveNumber?: unknown };
   const maybeCard = payload.blindRevealedCard;
+  const moveNumber = typeof payload.moveNumber === "number" ? payload.moveNumber : null;
   const revealedCard =
     maybeCard && typeof maybeCard.rank === "string" && typeof maybeCard.suit === "string"
       ? { rank: maybeCard.rank, suit: maybeCard.suit }
@@ -253,6 +270,8 @@ export function getLatestBlindPlayOutcome(events: LobbySnapshot["events"]): Blin
 
   return {
     eventId: latestBlind.id,
+    actorUserId: latestBlind.actorUserId,
+    moveNumber,
     status: pickedUp ? "pickup" : "success",
     message: line,
     revealedCard,

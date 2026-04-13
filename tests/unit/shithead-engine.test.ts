@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   applyMove,
   chooseStartingPlayerSeatIndexAfterSwap,
+  createInitialGameState,
   getEffectivePileState,
   getLegalMoves,
   type Card,
@@ -39,6 +40,7 @@ function state(input: Partial<GameState> & { players: PlayerGameState[] }): Game
     drawPile: input.drawPile ?? [],
     discardPile: input.discardPile ?? [],
     burnedCards: input.burnedCards ?? [],
+    burnedPileHistory: input.burnedPileHistory ?? [],
     currentPlayerSeatIndex: input.currentPlayerSeatIndex ?? 0,
     turnNumber: input.turnNumber ?? 1,
     phase: input.phase ?? "active",
@@ -60,6 +62,20 @@ test("starting player picks lowest hand rank and resolves ties by seat order", (
   assert.equal(chooseStartingPlayerSeatIndexAfterSwap(game), 1);
 });
 
+test("debug short deck keeps 3/3/3 setup but trims draw pile", () => {
+  const full = createInitialGameState(["u1", "u2"]);
+  const short = createInitialGameState(["u1", "u2"], undefined, { debugShortDeck: true });
+
+  assert.equal(short.players[0].hand.length, 3);
+  assert.equal(short.players[0].tableFaceUp.length, 3);
+  assert.equal(short.players[0].tableFaceDown.length, 3);
+  assert.equal(short.players[1].hand.length, 3);
+  assert.equal(short.players[1].tableFaceUp.length, 3);
+  assert.equal(short.players[1].tableFaceDown.length, 3);
+  assert.equal(short.drawPile.length <= 10, true);
+  assert.equal(short.drawPile.length < full.drawPile.length, true);
+});
+
 test("2 resets effective restriction", () => {
   const effective = getEffectivePileState([card("x1", "9"), card("x2", "2")]);
   assert.equal(effective.rankRestriction, null);
@@ -78,6 +94,10 @@ test("10 burns pile and same player keeps turn", () => {
   assert.equal(result.burned, true);
   assert.equal(result.state.discardPile.length, 0);
   assert.equal(result.state.currentPlayerSeatIndex, 0);
+  assert.deepEqual(
+    result.burnedPileCards?.map((entry) => entry.id),
+    ["d1", "h10"],
+  );
 });
 
 test("7 enforces seven-or-lower, preserved through transparent 3", () => {
@@ -145,6 +165,84 @@ test("four of a kind burns including four 3s", () => {
   assert.equal(result.state.discardPile.length, 0);
 });
 
+test("direct 4-of-a-kind can burn regardless of discard restriction", () => {
+  const game = state({
+    players: [
+      player("u1", 0, [card("h4a", "4"), card("h4b", "4"), card("h4c", "4"), card("h4d", "4")]),
+      player("u2", 1, [card("x1", "9")]),
+    ],
+    discardPile: [card("topK", "K")],
+    currentPlayerSeatIndex: 0,
+  });
+
+  const legal = getLegalMoves(game);
+  assert.equal(
+    legal.some(
+      (move) =>
+        move.type === "play" &&
+        move.cardIds.length === 4 &&
+        move.cardIds.includes("h4a") &&
+        move.cardIds.includes("h4b") &&
+        move.cardIds.includes("h4c") &&
+        move.cardIds.includes("h4d"),
+    ),
+    true,
+  );
+
+  const result = applyMove(game, "u1", { type: "play", cardIds: ["h4a", "h4b", "h4c", "h4d"] });
+
+  assert.equal(result.burned, true);
+  assert.equal(result.state.currentPlayerSeatIndex, 0);
+  assert.deepEqual(result.state.discardPile.map((entry) => entry.id), ["topK"]);
+  assert.deepEqual(result.burnedPileCards?.map((entry) => entry.id), ["h4a", "h4b", "h4c", "h4d"]);
+  assert.deepEqual(result.state.burnedPileHistory.at(-1)?.map((entry) => entry.id), ["h4a", "h4b", "h4c", "h4d"]);
+});
+
+test("off-turn throw-in can complete four and burns pile, skipping turn order", () => {
+  const game = state({
+    players: [
+      player("u1", 0, [card("a1", "9")]),
+      player("u2", 1, [card("b1", "6")]),
+      player("u3", 2, [card("c5a", "5"), card("c5b", "5")]),
+    ],
+    drawPile: [],
+    discardPile: [card("d5a", "5"), card("d5b", "5")],
+    currentPlayerSeatIndex: 1,
+  });
+
+  const legalForU3 = getLegalMoves(game, "u3");
+  assert.equal(
+    legalForU3.some((move) => move.type === "play" && move.cardIds.length === 2 && move.cardIds.includes("c5a") && move.cardIds.includes("c5b")),
+    true,
+  );
+
+  const result = applyMove(game, "u3", { type: "play", cardIds: ["c5a", "c5b"] });
+
+  assert.equal(result.burned, true);
+  assert.equal(result.state.currentPlayerSeatIndex, 2);
+  assert.equal(result.state.discardPile.length, 0);
+  assert.deepEqual(result.burnedPileCards?.map((entry) => entry.id), ["d5a", "d5b", "c5a", "c5b"]);
+});
+
+test("off-turn throw-in allows transparent 3 between matching top cards", () => {
+  const game = state({
+    players: [
+      player("u1", 0, [card("a1", "9")]),
+      player("u2", 1, [card("b1", "6")]),
+      player("u3", 2, [card("c5a", "5"), card("c5b", "5")]),
+    ],
+    drawPile: [],
+    discardPile: [card("d5a", "5"), card("d3", "3"), card("d5b", "5")],
+    currentPlayerSeatIndex: 1,
+  });
+
+  const legalForU3 = getLegalMoves(game, "u3");
+  assert.equal(
+    legalForU3.some((move) => move.type === "play" && move.cardIds.length === 2 && move.cardIds.includes("c5a") && move.cardIds.includes("c5b")),
+    true,
+  );
+});
+
 test("pickup takes entire pile and same player starts new pile", () => {
   const game = state({
     players: [player("u1", 0, [card("h9", "9")]), player("u2", 1, [card("x1", "4")])],
@@ -178,7 +276,29 @@ test("turn source transitions to face-up when hand empty and stock empty", () =>
   });
 
   const legal = getLegalMoves(game);
-  assert.equal(legal.some((move) => move.type === "face_up_pickup"), true);
+  assert.equal(legal.some((move) => move.type === "play"), true);
+  assert.equal(legal.some((move) => move.type === "pickup"), false);
+});
+
+test("face-up player with no legal play can pickup pile without consuming face-up card", () => {
+  const game = state({
+    players: [player("u1", 0, [], [card("fu1", "4"), card("fu2", "5")]), player("u2", 1, [card("x1", "9")])],
+    drawPile: [],
+    discardPile: [card("d1", "K")],
+    currentPlayerSeatIndex: 0,
+  });
+
+  const legal = getLegalMoves(game);
+  assert.equal(legal.some((move) => move.type === "play"), false);
+  assert.equal(legal.some((move) => move.type === "pickup"), true);
+
+  const result = applyMove(game, "u1", { type: "pickup" });
+  const current = result.state.players.find((entry) => entry.userId === "u1");
+
+  assert.equal(result.pickedUp, true);
+  assert.equal(result.state.discardPile.length, 0);
+  assert.equal(current?.tableFaceUp.length, 2);
+  assert.equal(current?.hand.some((entry) => entry.id === "d1"), true);
 });
 
 test("duplicate same-rank hand cards allow either single card play", () => {
@@ -194,6 +314,27 @@ test("duplicate same-rank hand cards allow either single card play", () => {
 
   assert.equal(legal.some((move) => move.type === "play" && move.cardIds.length === 1 && move.cardIds[0] === "h7a"), true);
   assert.equal(legal.some((move) => move.type === "play" && move.cardIds.length === 1 && move.cardIds[0] === "h7b"), true);
+});
+
+test("when stock is empty and hand is single-rank, play can combine hand and matching face-up cards", () => {
+  const game = state({
+    players: [
+      player("u1", 0, [card("h3a", "3"), card("h3b", "3")], [card("f3", "3"), card("f9", "9")]),
+      player("u2", 1, [card("x1", "4")]),
+    ],
+    drawPile: [],
+    currentPlayerSeatIndex: 0,
+  });
+
+  const legal = getLegalMoves(game);
+  assert.equal(legal.some((move) => move.type === "play" && move.cardIds.length === 3 && move.cardIds.includes("h3a") && move.cardIds.includes("h3b") && move.cardIds.includes("f3")), true);
+
+  const result = applyMove(game, "u1", { type: "play", cardIds: ["h3a", "h3b", "f3"] });
+  const current = result.state.players.find((entry) => entry.userId === "u1");
+
+  assert.equal(current?.hand.length, 0);
+  assert.equal(current?.tableFaceUp.some((entry) => entry.id === "f3"), false);
+  assert.equal(current?.tableFaceUp.some((entry) => entry.id === "f9"), true);
 });
 
 test("blind face-down illegal card forces pickup including flipped card", () => {
