@@ -2,6 +2,10 @@
 
 Private, invite-only web app for tracking card game sessions, participants, and winners.
 
+## Online Multiplayer Note
+
+Online lobby/game architecture notes are documented in `docs/online-play.md`.
+
 ## Stack
 
 - Next.js (App Router) + TypeScript

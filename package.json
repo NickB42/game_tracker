@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:with-migrate": "prisma migrate deploy && next dev",
     "build": "next build",
     "build:deploy": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
@@ -17,14 +18,19 @@
     "test:e2e": "playwright test --grep @smoke",
     "test:e2e:headed": "playwright test --grep @smoke --headed",
     "test:e2e:ui": "playwright test --grep @smoke --ui",
-    "test:e2e:install": "playwright install --with-deps"
+    "test:e2e:install": "playwright install --with-deps",
+    "test:unit": "node --import tsx --test $(find tests/unit -name '*.test.ts')"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.2",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@letele/playing-cards": "^0.1.0",
     "@prisma/client": "^6.19.3",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "better-auth": "^1.6.2",
+    "motion": "^12.38.0",
     "next": "16.2.3",
     "openskill": "^4.0.0",
     "react": "19.2.4",

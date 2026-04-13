@@ -15,6 +15,7 @@ const envSchema = z.object({
   BETTER_AUTH_ENABLE_VERCEL_PREVIEW: z
     .enum(["true", "false", "1", "0", "yes", "no"])
     .optional(),
+  ONLINE_LOBBY_EMPTY_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(240).optional(),
   VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
   VERCEL_URL: z.string().optional(),
   VERCEL_BRANCH_URL: z.string().optional(),

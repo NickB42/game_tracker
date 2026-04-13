@@ -103,7 +103,10 @@ export async function getGameSessionById(id: string) {
   });
 }
 
-export async function createGameSession(input: GameSessionInput & { createdByUserId?: string | null }, tx?: Prisma.TransactionClient) {
+export async function createGameSession(
+  input: GameSessionInput & { createdByUserId?: string | null; source?: "MANUAL" | "ONLINE" },
+  tx?: Prisma.TransactionClient,
+) {
   const db = tx ?? prisma;
 
   if (input.groupId) {
@@ -116,6 +119,7 @@ export async function createGameSession(input: GameSessionInput & { createdByUse
       title: input.title,
       playedAt: input.playedAt,
       notes: input.notes,
+      source: input.source,
       createdByUserId: input.createdByUserId ?? null,
     },
   });
