@@ -92,6 +92,21 @@ export async function createGroup(input: GroupInput & { ownerUserId: string }, t
   const db = tx ?? prisma;
   const trustedAdminUserIds = uniqueIds([input.ownerUserId, ...input.trustedAdminUserIds]);
 
+  const existingUsers = await db.user.findMany({
+    where: {
+      id: {
+        in: trustedAdminUserIds,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingUsers.length !== trustedAdminUserIds.length) {
+    throw new Error("One or more selected trusted admins no longer exist.");
+  }
+
   return db.group.create({
     data: {
       ownerUserId: input.ownerUserId,

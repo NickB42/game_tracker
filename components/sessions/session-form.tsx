@@ -163,7 +163,7 @@ export function SessionForm(props: SessionFormProps) {
               <label key={user.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
                 <span className="text-sm text-zinc-800">
                   {user.name}
-                  <span className="ml-2 text-xs text-zinc-500">({user.email})</span>
+                  {user.email ? <span className="ml-2 text-xs text-zinc-500">({user.email})</span> : null}
                 </span>
                 <input
                   type="checkbox"
@@ -176,6 +176,9 @@ export function SessionForm(props: SessionFormProps) {
             ))
           )}
         </div>
+        {state.fieldErrors?.trustedAdminUserIds ? (
+          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.trustedAdminUserIds}</p>
+        ) : null}
       </section>
 
       <section>

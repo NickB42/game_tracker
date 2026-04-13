@@ -180,6 +180,21 @@ export async function createGameSession(
 
   const trustedAdminUserIds = uniqueIds([input.ownerUserId, ...groupTrustedAdminUserIds, ...input.trustedAdminUserIds]);
 
+  const existingUsers = await db.user.findMany({
+    where: {
+      id: {
+        in: trustedAdminUserIds,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingUsers.length !== trustedAdminUserIds.length) {
+    throw new Error("One or more selected trusted admins no longer exist.");
+  }
+
   return db.gameSession.create({
     data: {
       groupId: input.groupId,

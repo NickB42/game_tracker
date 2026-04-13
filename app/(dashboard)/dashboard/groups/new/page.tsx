@@ -14,7 +14,7 @@ export default async function NewGroupPage() {
     redirect("/dashboard/groups");
   }
 
-  const [players, users] = await Promise.all([getPlayers({ includeInactive: true }), getAssignableUsers()]);
+  const [players, users] = await Promise.all([getPlayers({ includeInactive: true }), getAssignableUsers(user)]);
 
   return (
     <section className="space-y-5">

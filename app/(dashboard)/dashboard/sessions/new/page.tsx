@@ -18,7 +18,7 @@ export default async function NewSessionPage() {
   const [groups, players, users] = await Promise.all([
     getGroups(user),
     getPlayers({ includeInactive: true }),
-    getAssignableUsers(),
+    getAssignableUsers(user),
   ]);
 
   return (

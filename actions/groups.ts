@@ -16,6 +16,7 @@ export type GroupFormState = {
     name?: string;
     description?: string;
     playerIds?: string;
+    trustedAdminUserIds?: string;
   };
 };
 
@@ -56,6 +57,7 @@ export async function createGroupAction(_prevState: GroupFormState, formData: Fo
       fieldErrors: {
         name: fieldErrors.name?.[0],
         description: fieldErrors.description?.[0],
+        trustedAdminUserIds: fieldErrors.trustedAdminUserIds?.[0],
       },
       message: "Please correct the highlighted fields.",
     };
@@ -139,6 +141,7 @@ export async function updateGroupAction(
         name: fieldErrors.name?.[0],
         description: fieldErrors.description?.[0],
         playerIds: fieldErrors.playerIds?.[0],
+        trustedAdminUserIds: fieldErrors.trustedAdminUserIds?.[0],
       },
       message: "Please correct the highlighted fields.",
     };

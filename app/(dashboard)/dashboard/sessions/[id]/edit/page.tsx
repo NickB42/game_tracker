@@ -24,7 +24,7 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
     getGameSessionAuthorizationContext(id, user),
     getGroups(user),
     getPlayers({ includeInactive: true }),
-    getAssignableUsers(),
+    getAssignableUsers(user),
   ]);
 
   if (!gameSession || !sessionContext || !canEditSession(user, sessionContext)) {

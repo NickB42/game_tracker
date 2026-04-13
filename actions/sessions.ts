@@ -24,6 +24,7 @@ export type SessionFormState = {
     playedAt?: string;
     notes?: string;
     participantIds?: string;
+    trustedAdminUserIds?: string;
   };
 };
 
@@ -81,6 +82,7 @@ export async function createGameSessionAction(_prevState: SessionFormState, form
         playedAt: fieldErrors.playedAt?.[0],
         notes: fieldErrors.notes?.[0],
         participantIds: fieldErrors.participantIds?.[0],
+        trustedAdminUserIds: fieldErrors.trustedAdminUserIds?.[0],
       },
       message: "Please correct the highlighted fields.",
     };
@@ -158,6 +160,7 @@ export async function updateGameSessionAction(
         playedAt: fieldErrors.playedAt?.[0],
         notes: fieldErrors.notes?.[0],
         participantIds: fieldErrors.participantIds?.[0],
+        trustedAdminUserIds: fieldErrors.trustedAdminUserIds?.[0],
       },
       message: "Please correct the highlighted fields.",
     };

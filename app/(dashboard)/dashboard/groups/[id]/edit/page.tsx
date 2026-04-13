@@ -22,7 +22,7 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
     getGroupAuthorizationContext(id, user),
     getGroupById(id, user),
     getPlayers({ includeInactive: true }),
-    getAssignableUsers(),
+    getAssignableUsers(user),
   ]);
 
   if (!group || !groupContext || !canEditGroup(user, groupContext)) {

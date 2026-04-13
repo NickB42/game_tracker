@@ -89,7 +89,10 @@ export function GroupForm(props: GroupFormProps) {
 
       <section>
         <h2 className="text-sm font-medium text-zinc-900">Trusted admins</h2>
-        <p className="mt-1 text-sm text-zinc-600">Trusted admins can edit this group and inherited session permissions.</p>
+        <p className="mt-1 text-sm text-zinc-600">
+          Trusted admins can edit this group. Their permissions are copied to linked sessions when those sessions are
+          created or edited.
+        </p>
 
         <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
           {props.selectableUsers.length === 0 ? (
@@ -99,7 +102,7 @@ export function GroupForm(props: GroupFormProps) {
               <label key={user.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
                 <span className="text-sm text-zinc-800">
                   {user.name}
-                  <span className="ml-2 text-xs text-zinc-500">({user.email})</span>
+                  {user.email ? <span className="ml-2 text-xs text-zinc-500">({user.email})</span> : null}
                 </span>
                 <input
                   type="checkbox"
@@ -112,6 +115,9 @@ export function GroupForm(props: GroupFormProps) {
             ))
           )}
         </div>
+        {state.fieldErrors?.trustedAdminUserIds ? (
+          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.trustedAdminUserIds}</p>
+        ) : null}
       </section>
 
       <section>
