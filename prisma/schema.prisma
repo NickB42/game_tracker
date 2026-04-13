@@ -12,6 +12,30 @@ enum Role {
   MEMBER
 }
 
+enum GameSessionSource {
+  MANUAL
+  ONLINE
+}
+
+enum OnlineLobbyStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+  CLOSED
+}
+
+enum OnlineGamePlayerStatus {
+  ACTIVE
+  OUT
+  LOST
+}
+
+enum OnlineGameStatus {
+  IN_PROGRESS
+  FINISHED
+  CLOSED
+}
+
 model User {
   id                 String   @id @default(cuid())
   email              String   @unique
@@ -31,6 +55,10 @@ model User {
   sessions            Session[]
   accounts            Account[]
   createdGameSessions GameSession[] @relation("GameSessionCreatedBy")
+  ownedOnlineLobbies  OnlineLobby[] @relation("OnlineLobbyOwner")
+  onlineLobbyPlayers  OnlineLobbyPlayer[]
+  onlineGamePlayers   OnlineGamePlayer[]
+  onlineEventActors   OnlineGameEvent[] @relation("OnlineGameEventActor")
 
   @@map("user")
 }
@@ -136,6 +164,7 @@ model GameSession {
   title           String?
   playedAt        DateTime
   notes           String?
+  source          GameSessionSource @default(MANUAL)
   archivedAt      DateTime?
   createdByUserId String?
   createdAt       DateTime @default(now())
@@ -150,6 +179,115 @@ model GameSession {
   @@index([createdByUserId])
   @@index([playedAt])
   @@index([archivedAt])
+}
+
+model OnlineLobby {
+  id          String            @id @default(cuid())
+  code        String            @unique
+  ownerUserId String
+  status      OnlineLobbyStatus @default(WAITING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  closedAt    DateTime?
+  emptySince  DateTime?
+
+  owner  User                @relation("OnlineLobbyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  players OnlineLobbyPlayer[]
+  games   OnlineGame[]
+  events  OnlineGameEvent[]
+
+  @@index([status])
+  @@index([ownerUserId])
+  @@index([updatedAt])
+}
+
+model OnlineLobbyPlayer {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  userId      String
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+  isConnected Boolean  @default(true)
+  seatIndex   Int
+  readyState  Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  lobby OnlineLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([lobbyId, userId])
+  @@unique([lobbyId, seatIndex])
+  @@index([userId])
+  @@index([leftAt])
+}
+
+model OnlineGame {
+  id                    String            @id @default(cuid())
+  lobbyId               String
+  status                OnlineGameStatus @default(IN_PROGRESS)
+  startedAt             DateTime          @default(now())
+  finishedAt            DateTime?
+  currentTurnPlayerId   String?
+  moveNumber            Int               @default(0)
+  drawPileCount         Int               @default(0)
+  discardPileState      Json
+  publicStateJson       Json
+  privateStateJson      Json
+  eliminationOrderJson  Json
+  loserUserId           String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  lobby   OnlineLobby       @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  players OnlineGamePlayer[]
+  events  OnlineGameEvent[]
+
+  @@unique([lobbyId])
+  @@index([status])
+  @@index([currentTurnPlayerId])
+  @@index([loserUserId])
+}
+
+model OnlineGamePlayer {
+  id               String                 @id @default(cuid())
+  gameId           String
+  userId           String
+  seatIndex        Int
+  status           OnlineGamePlayerStatus @default(ACTIVE)
+  handCount        Int                    @default(0)
+  faceDownCount    Int                    @default(3)
+  faceUpCardsJson  Json
+  privateStateJson Json
+  placement        Int?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  game OnlineGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([gameId, userId])
+  @@unique([gameId, seatIndex])
+  @@index([userId])
+  @@index([status])
+  @@index([placement])
+}
+
+model OnlineGameEvent {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  gameId      String?
+  actorUserId String?
+  type        String
+  payloadJson Json
+  createdAt   DateTime @default(now())
+
+  lobby OnlineLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  game  OnlineGame? @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  actor User?       @relation("OnlineGameEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([lobbyId, createdAt])
+  @@index([gameId, createdAt])
+  @@index([actorUserId])
 }
 
 model SessionParticipant {

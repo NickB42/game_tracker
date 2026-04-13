@@ -17,7 +17,8 @@
     "test:e2e": "playwright test --grep @smoke",
     "test:e2e:headed": "playwright test --grep @smoke --headed",
     "test:e2e:ui": "playwright test --grep @smoke --ui",
-    "test:e2e:install": "playwright install --with-deps"
+    "test:e2e:install": "playwright install --with-deps",
+    "test:unit": "node --import tsx --test $(find tests/unit -name '*.test.ts')"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.2",

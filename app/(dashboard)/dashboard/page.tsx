@@ -77,6 +77,12 @@ export default async function DashboardPage() {
           Open leaderboards
         </Link>
         <Link
+          href="/dashboard/online-play"
+          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
+        >
+          Online play
+        </Link>
+        <Link
           href="/dashboard/settings/security"
           className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
         >
