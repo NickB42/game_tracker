@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SessionForm } from "@/components/sessions/session-form";
-import { requireAdminUser } from "@/lib/auth/guards";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
 import { getPlayers } from "@/lib/db/players";
-import { getGameSessionById } from "@/lib/db/sessions";
+import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
+import { getAssignableUsers } from "@/lib/db/users";
 
 type EditGameSessionPageProps = {
   params: Promise<{
@@ -14,16 +16,18 @@ type EditGameSessionPageProps = {
 };
 
 export default async function EditGameSessionPage({ params }: EditGameSessionPageProps) {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
   const { id } = await params;
 
-  const [gameSession, groups, players] = await Promise.all([
-    getGameSessionById(id),
-    getGroups(),
+  const [gameSession, sessionContext, groups, players, users] = await Promise.all([
+    getGameSessionById(id, user),
+    getGameSessionAuthorizationContext(id, user),
+    getGroups(user),
     getPlayers({ includeInactive: true }),
+    getAssignableUsers(),
   ]);
 
-  if (!gameSession) {
+  if (!gameSession || !sessionContext || !canEditSession(user, sessionContext)) {
     notFound();
   }
 
@@ -43,6 +47,11 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
         mode="edit"
         gameSessionId={gameSession.id}
         selectableGroups={groups.map((group) => ({ id: group.id, name: group.name }))}
+        selectableUsers={users.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          email: entry.email,
+        }))}
         selectablePlayers={players.map((player) => ({
           id: player.id,
           displayName: player.displayName,
@@ -54,6 +63,7 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
           playedAt: gameSession.playedAt.toISOString(),
           notes: gameSession.notes,
           participantIds: gameSession.participants.map((participant) => participant.playerId),
+          trustedAdminUserIds: gameSession.trustedAdmins.map((entry) => entry.userId),
         }}
       />
     </section>

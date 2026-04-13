@@ -1113,10 +1113,12 @@ export async function exportFinishedOnlineGameToTracker(userId: string, lobbyId:
     const session = await createGameSession(
       {
         groupId: undefined,
+        ownerUserId: userId,
         title: `Online lobby ${lobby.code} (${game.id.slice(0, 8)})`,
         playedAt: game.finishedAt ?? now(),
         notes: `Imported from online multiplayer match ${game.id}.`,
         participantIds: playerIds,
+        trustedAdminUserIds: [],
         createdByUserId: userId,
         source: "ONLINE",
       },

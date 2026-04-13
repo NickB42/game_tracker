@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { GroupForm } from "@/components/groups/group-form";
-import { requireAdminUser } from "@/lib/auth/guards";
-import { getGroupById } from "@/lib/db/groups";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditGroup } from "@/lib/domain/authorization";
+import { getGroupAuthorizationContext, getGroupById } from "@/lib/db/groups";
 import { getPlayers } from "@/lib/db/players";
+import { getAssignableUsers } from "@/lib/db/users";
 
 type EditGroupPageProps = {
   params: Promise<{
@@ -13,12 +15,17 @@ type EditGroupPageProps = {
 };
 
 export default async function EditGroupPage({ params }: EditGroupPageProps) {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
   const { id } = await params;
 
-  const [group, players] = await Promise.all([getGroupById(id), getPlayers({ includeInactive: true })]);
+  const [groupContext, group, players, users] = await Promise.all([
+    getGroupAuthorizationContext(id, user),
+    getGroupById(id, user),
+    getPlayers({ includeInactive: true }),
+    getAssignableUsers(),
+  ]);
 
-  if (!group) {
+  if (!group || !groupContext || !canEditGroup(user, groupContext)) {
     notFound();
   }
 
@@ -37,6 +44,11 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
       <GroupForm
         mode="edit"
         groupId={group.id}
+        selectableUsers={users.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          email: entry.email,
+        }))}
         selectablePlayers={players.map((player) => ({
           id: player.id,
           displayName: player.displayName,
@@ -46,6 +58,7 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
           name: group.name,
           description: group.description,
           memberPlayerIds: group.memberships.map((membership) => membership.playerId),
+          trustedAdminUserIds: group.trustedAdmins.map((entry) => entry.userId),
         }}
       />
     </section>

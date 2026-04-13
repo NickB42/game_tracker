@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 
 import { deleteRoundAction } from "@/actions/rounds";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditSession } from "@/lib/domain/authorization";
 import { getRoundsByGameSessionId, getSessionRoundSummary } from "@/lib/db/rounds";
-import { getGameSessionById } from "@/lib/db/sessions";
+import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 
 type GameSessionDetailPageProps = {
   params: Promise<{
@@ -23,15 +24,18 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
   const user = await requireAuthenticatedUser();
   const { id } = await params;
 
-  const [gameSession, rounds, summary] = await Promise.all([
-    getGameSessionById(id),
-    getRoundsByGameSessionId(id),
-    getSessionRoundSummary(id),
+  const [gameSession, sessionContext] = await Promise.all([
+    getGameSessionById(id, user),
+    getGameSessionAuthorizationContext(id, user),
   ]);
 
-  if (!gameSession) {
+  if (!gameSession || !sessionContext) {
     notFound();
   }
+
+  const [rounds, summary] = await Promise.all([getRoundsByGameSessionId(id), getSessionRoundSummary(id)]);
+
+  const canManageSession = canEditSession(user, sessionContext);
 
   const matchWinnerNameSet = new Set(
     summary.participants
@@ -55,7 +59,7 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
           <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/leaderboards/global">
             Global leaderboard
           </Link>
-          {user.role === "ADMIN" ? (
+          {canManageSession ? (
             <>
               <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/sessions/${gameSession.id}/edit`}>
                 Edit session
@@ -90,14 +94,38 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
           </dd>
         </div>
         <div className="flex items-center justify-between px-4 py-3 text-sm">
+          <dt className="font-medium text-zinc-700">Owner</dt>
+          <dd className="text-zinc-900">{gameSession.ownerUser.name}</dd>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 text-sm">
           <dt className="font-medium text-zinc-700">Created by</dt>
           <dd className="text-zinc-900">{gameSession.createdByUser?.name ?? "Unknown"}</dd>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 text-sm">
+          <dt className="font-medium text-zinc-700">Trusted admins</dt>
+          <dd className="text-zinc-900">{gameSession.trustedAdmins.length}</dd>
         </div>
         <div className="flex items-center justify-between px-4 py-3 text-sm">
           <dt className="font-medium text-zinc-700">Participants</dt>
           <dd className="text-zinc-900">{gameSession.participants.length}</dd>
         </div>
       </dl>
+
+      <section>
+        <h2 className="text-lg font-semibold text-zinc-900">Trusted admins</h2>
+        {gameSession.trustedAdmins.length === 0 ? (
+          <p className="mt-2 text-sm text-zinc-600">No trusted admins assigned.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+            {gameSession.trustedAdmins.map((trustedAdmin) => (
+              <li key={trustedAdmin.id} className="px-4 py-3 text-sm text-zinc-800">
+                {trustedAdmin.user.name}
+                <span className="ml-2 text-xs text-zinc-500">({trustedAdmin.user.email})</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section>
         <h2 className="text-lg font-semibold text-zinc-900">Session summary</h2>
@@ -186,7 +214,7 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
                     <span className="text-zinc-500">{round.placements.length} placements</span>
                   </div>
 
-                  {user.role === "ADMIN" ? (
+                  {canManageSession ? (
                     <div className="flex items-center gap-3">
                       <Link className="underline" href={`/dashboard/sessions/${gameSession.id}/rounds/${round.id}/edit`}>
                         Edit

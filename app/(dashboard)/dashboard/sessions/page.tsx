@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canCreateSession, canEditSession } from "@/lib/domain/authorization";
 import { getGameSessions } from "@/lib/db/sessions";
 
 function formatDateTime(value: Date) {
@@ -12,7 +13,7 @@ function formatDateTime(value: Date) {
 
 export default async function SessionsPage() {
   const user = await requireAuthenticatedUser();
-  const sessions = await getGameSessions();
+  const sessions = await getGameSessions(user);
 
   return (
     <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -21,7 +22,7 @@ export default async function SessionsPage() {
           <h1 className="text-2xl font-semibold text-zinc-900">Game sessions</h1>
           <p className="mt-1 text-sm text-zinc-600">Track each played session with explicit attendance.</p>
         </div>
-        {user.role === "ADMIN" ? (
+        {canCreateSession(user) ? (
           <Link
             href="/dashboard/sessions/new"
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
@@ -59,7 +60,14 @@ export default async function SessionsPage() {
                       <Link className="text-zinc-900 underline" href={`/dashboard/sessions/${session.id}`}>
                         View
                       </Link>
-                      {user.role === "ADMIN" ? (
+                      {canEditSession(user, {
+                        isOwner: session.ownerUserId === user.id,
+                        isTrustedAdmin: session.trustedAdmins.length > 0,
+                        isParticipant: false,
+                        isLinkedGroupOwner: false,
+                        isLinkedGroupTrustedAdmin: false,
+                        isLinkedGroupMember: false,
+                      }) ? (
                         <Link className="text-zinc-900 underline" href={`/dashboard/sessions/${session.id}/edit`}>
                           Edit
                         </Link>

@@ -14,6 +14,7 @@ const optionalTrimmedString = (maxLength: number) =>
   );
 
 const playerIdSchema = z.string().trim().min(1).max(64);
+const userIdSchema = z.string().trim().min(1).max(64);
 
 export const groupInputSchema = z.object({
   name: z
@@ -22,6 +23,7 @@ export const groupInputSchema = z.object({
     .min(1, "Group name is required.")
     .max(80, "Group name must be 80 characters or fewer."),
   description: optionalTrimmedString(500),
+  trustedAdminUserIds: z.array(userIdSchema).max(100, "Too many trusted admins selected.").default([]),
 });
 
 export const groupMembershipUpdateInputSchema = z.object({

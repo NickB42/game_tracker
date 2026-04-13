@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 
-import { isCurrentUserAdmin } from "@/lib/auth/guards";
-import { createGroup, setGroupMembers, updateGroup } from "@/lib/db/groups";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canCreateGroup, canEditGroup } from "@/lib/domain/authorization";
+import { createGroup, getGroupAuthorizationContext, setGroupMembers, setGroupTrustedAdmins, updateGroup } from "@/lib/db/groups";
 import { prisma } from "@/lib/db/prisma";
 import { groupInputSchema, groupWithMembersInputSchema } from "@/lib/validation/group";
 
@@ -26,18 +27,27 @@ function parsePlayerIdsFromFormData(formData: FormData): string[] {
     .filter((value) => value.length > 0);
 }
 
-export async function createGroupAction(_prevState: GroupFormState, formData: FormData): Promise<GroupFormState> {
-  const isAdmin = await isCurrentUserAdmin();
+function parseTrustedAdminUserIdsFromFormData(formData: FormData): string[] {
+  return formData
+    .getAll("trustedAdminUserIds")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
 
-  if (!isAdmin) {
+export async function createGroupAction(_prevState: GroupFormState, formData: FormData): Promise<GroupFormState> {
+  const user = await requireAuthenticatedUser();
+
+  if (!canCreateGroup(user)) {
     return {
-      message: "Only admins can create groups.",
+      message: "You are not allowed to create groups.",
     };
   }
 
   const parsed = groupInputSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description"),
+    trustedAdminUserIds: parseTrustedAdminUserIdsFromFormData(formData),
   });
 
   if (!parsed.success) {
@@ -57,7 +67,14 @@ export async function createGroupAction(_prevState: GroupFormState, formData: Fo
 
   try {
     const group = await prisma.$transaction(async (tx) => {
-      const created = await createGroup(parsed.data, tx);
+      const created = await createGroup(
+        {
+          ...parsed.data,
+          ownerUserId: user.id,
+        },
+        tx,
+      );
+
       await setGroupMembers(
         {
           groupId: created.id,
@@ -98,11 +115,12 @@ export async function updateGroupAction(
   _prevState: GroupFormState,
   formData: FormData,
 ): Promise<GroupFormState> {
-  const isAdmin = await isCurrentUserAdmin();
+  const user = await requireAuthenticatedUser();
+  const groupContext = await getGroupAuthorizationContext(groupId, user);
 
-  if (!isAdmin) {
+  if (!groupContext || !canEditGroup(user, groupContext)) {
     return {
-      message: "Only admins can edit groups.",
+      message: "You are not allowed to edit this group.",
     };
   }
 
@@ -111,6 +129,7 @@ export async function updateGroupAction(
     name: formData.get("name"),
     description: formData.get("description"),
     playerIds: parsePlayerIdsFromFormData(formData),
+    trustedAdminUserIds: parseTrustedAdminUserIdsFromFormData(formData),
   });
 
   if (!parsed.success) {
@@ -130,6 +149,16 @@ export async function updateGroupAction(
   try {
     const group = await prisma.$transaction(async (tx) => {
       const updated = await updateGroup(parsed.data, tx);
+
+      await setGroupTrustedAdmins(
+        {
+          groupId: updated.id,
+          ownerUserId: updated.ownerUserId,
+          trustedAdminUserIds: parsed.data.trustedAdminUserIds,
+        },
+        tx,
+      );
+
       await setGroupMembers(
         {
           groupId: updated.id,

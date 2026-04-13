@@ -32,6 +32,7 @@ export const gameSessionInputSchema = z.object({
   playedAt: playedAtSchema,
   notes: optionalTrimmedString(1000),
   participantIds: participantIdsSchema,
+  trustedAdminUserIds: z.array(idSchema).max(100, "Too many trusted admins selected.").default([]),
 });
 
 export const gameSessionUpdateInputSchema = gameSessionInputSchema.extend({

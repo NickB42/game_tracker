@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canCreateGroup, canEditGroup } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
 
 export default async function GroupsPage() {
   const user = await requireAuthenticatedUser();
-  const groups = await getGroups();
+  const groups = await getGroups(user);
 
   return (
     <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -14,7 +15,7 @@ export default async function GroupsPage() {
           <h1 className="text-2xl font-semibold text-zinc-900">Groups</h1>
           <p className="mt-1 text-sm text-zinc-600">Named collections of players with explicit memberships.</p>
         </div>
-        {user.role === "ADMIN" ? (
+        {canCreateGroup(user) ? (
           <Link
             href="/dashboard/groups/new"
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
@@ -48,7 +49,11 @@ export default async function GroupsPage() {
                       <Link className="text-zinc-900 underline" href={`/dashboard/groups/${group.id}`}>
                         View
                       </Link>
-                      {user.role === "ADMIN" ? (
+                      {canEditGroup(user, {
+                        isOwner: group.ownerUserId === user.id,
+                        isTrustedAdmin: group.trustedAdmins.length > 0,
+                        isMember: false,
+                      }) ? (
                         <Link className="text-zinc-900 underline" href={`/dashboard/groups/${group.id}/edit`}>
                           Edit
                         </Link>

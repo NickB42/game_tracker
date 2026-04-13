@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RoundForm } from "@/components/rounds/round-form";
-import { requireAdminUser } from "@/lib/auth/guards";
-import { getGameSessionById } from "@/lib/db/sessions";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditSession } from "@/lib/domain/authorization";
+import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 
 type NewSessionRoundPageProps = {
   params: Promise<{
@@ -12,12 +13,15 @@ type NewSessionRoundPageProps = {
 };
 
 export default async function NewSessionRoundPage({ params }: NewSessionRoundPageProps) {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
   const { id } = await params;
 
-  const gameSession = await getGameSessionById(id);
+  const [gameSession, sessionContext] = await Promise.all([
+    getGameSessionById(id, user),
+    getGameSessionAuthorizationContext(id, user),
+  ]);
 
-  if (!gameSession) {
+  if (!gameSession || !sessionContext || !canEditSession(user, sessionContext)) {
     notFound();
   }
 

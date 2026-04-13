@@ -4,9 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 
-import { requireAdminUser } from "@/lib/auth/guards";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canCreateSession, canEditSession } from "@/lib/domain/authorization";
 import { prisma } from "@/lib/db/prisma";
-import { createGameSession, setSessionParticipants, updateGameSession } from "@/lib/db/sessions";
+import {
+  createGameSession,
+  getGameSessionAuthorizationContext,
+  setSessionParticipants,
+  setSessionTrustedAdmins,
+  updateGameSession,
+} from "@/lib/db/sessions";
 import { gameSessionInputSchema, gameSessionUpdateInputSchema } from "@/lib/validation/session";
 
 export type SessionFormState = {
@@ -39,8 +46,22 @@ function parseOptionalString(formData: FormData, key: string): string | undefine
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function parseTrustedAdminUserIdsFromFormData(formData: FormData): string[] {
+  return formData
+    .getAll("trustedAdminUserIds")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 export async function createGameSessionAction(_prevState: SessionFormState, formData: FormData): Promise<SessionFormState> {
-  const user = await requireAdminUser();
+  const user = await requireAuthenticatedUser();
+
+  if (!canCreateSession(user)) {
+    return {
+      message: "You are not allowed to create sessions.",
+    };
+  }
 
   const parsed = gameSessionInputSchema.safeParse({
     groupId: parseOptionalString(formData, "groupId"),
@@ -48,6 +69,7 @@ export async function createGameSessionAction(_prevState: SessionFormState, form
     playedAt: formData.get("playedAt"),
     notes: formData.get("notes"),
     participantIds: parseParticipantIdsFromFormData(formData),
+    trustedAdminUserIds: parseTrustedAdminUserIdsFromFormData(formData),
   });
 
   if (!parsed.success) {
@@ -71,6 +93,7 @@ export async function createGameSessionAction(_prevState: SessionFormState, form
       const created = await createGameSession(
         {
           ...parsed.data,
+          ownerUserId: user.id,
           createdByUserId: user.id,
         },
         tx,
@@ -107,7 +130,14 @@ export async function updateGameSessionAction(
   _prevState: SessionFormState,
   formData: FormData,
 ): Promise<SessionFormState> {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
+  const sessionContext = await getGameSessionAuthorizationContext(gameSessionId, user);
+
+  if (!sessionContext || !canEditSession(user, sessionContext)) {
+    return {
+      message: "You are not allowed to edit this session.",
+    };
+  }
 
   const parsed = gameSessionUpdateInputSchema.safeParse({
     id: gameSessionId,
@@ -116,6 +146,7 @@ export async function updateGameSessionAction(
     playedAt: formData.get("playedAt"),
     notes: formData.get("notes"),
     participantIds: parseParticipantIdsFromFormData(formData),
+    trustedAdminUserIds: parseTrustedAdminUserIdsFromFormData(formData),
   });
 
   if (!parsed.success) {
@@ -134,7 +165,18 @@ export async function updateGameSessionAction(
 
   try {
     await prisma.$transaction(async (tx) => {
-      await updateGameSession(parsed.data, tx);
+      const updatedSession = await updateGameSession(parsed.data, tx);
+
+      await setSessionTrustedAdmins(
+        {
+          gameSessionId: updatedSession.id,
+          ownerUserId: updatedSession.ownerUserId,
+          groupId: updatedSession.groupId,
+          trustedAdminUserIds: parsed.data.trustedAdminUserIds,
+        },
+        tx,
+      );
+
       await setSessionParticipants(
         {
           gameSessionId: parsed.data.id,

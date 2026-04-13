@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGroupLeaderboard } from "@/lib/db/leaderboards";
-import { prisma } from "@/lib/db/prisma";
+import { getGroupById } from "@/lib/db/groups";
 
 type GroupLeaderboardPageProps = {
   params: Promise<{
@@ -13,23 +13,21 @@ type GroupLeaderboardPageProps = {
 };
 
 export default async function GroupLeaderboardPage({ params }: GroupLeaderboardPageProps) {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
 
   const { groupId } = await params;
 
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+  const group = await getGroupById(groupId, user);
 
   if (!group) {
     notFound();
   }
 
-  const rows = await getGroupLeaderboard(group.id);
+  const rows = await getGroupLeaderboard(group.id, user);
+
+  if (!rows) {
+    notFound();
+  }
 
   return (
     <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">

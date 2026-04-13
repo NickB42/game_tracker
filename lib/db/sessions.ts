@@ -1,5 +1,10 @@
 import type { Prisma } from "@prisma/client";
 
+import {
+  buildSessionVisibilityWhere,
+  type AuthorizationActor,
+  type SessionAuthorizationContext,
+} from "@/lib/domain/authorization";
 import { GROUP_LOCK_MESSAGE, PARTICIPANTS_LOCK_MESSAGE, getSessionEditLockReasons } from "@/lib/domain/safety";
 import { prisma } from "@/lib/db/prisma";
 import type { GameSessionInput, GameSessionUpdateInput, SessionParticipantsUpdateInput } from "@/lib/validation/session";
@@ -14,6 +19,11 @@ async function assertGroupExists(groupId: string, db: Prisma.TransactionClient |
     select: {
       id: true,
       archivedAt: true,
+      trustedAdmins: {
+        select: {
+          userId: true,
+        },
+      },
     },
   });
 
@@ -24,6 +34,8 @@ async function assertGroupExists(groupId: string, db: Prisma.TransactionClient |
   if (group.archivedAt) {
     throw new Error("Archived groups cannot be assigned to new or edited sessions.");
   }
+
+  return group;
 }
 
 async function assertPlayersExist(playerIds: string[], db: Prisma.TransactionClient | typeof prisma) {
@@ -44,9 +56,14 @@ async function assertPlayersExist(playerIds: string[], db: Prisma.TransactionCli
   }
 }
 
-export async function getGameSessions(options?: { includeArchived?: boolean }) {
+export async function getGameSessions(actor: AuthorizationActor, options?: { includeArchived?: boolean }) {
+  const visibilityWhere = buildSessionVisibilityWhere(actor);
+
   return prisma.gameSession.findMany({
-    where: options?.includeArchived ? undefined : { archivedAt: null },
+    where: {
+      ...(options?.includeArchived ? {} : { archivedAt: null }),
+      ...visibilityWhere,
+    },
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
     include: {
       group: {
@@ -61,6 +78,22 @@ export async function getGameSessions(options?: { includeArchived?: boolean }) {
           name: true,
         },
       },
+      ownerUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      trustedAdmins: {
+        where: {
+          userId: actor.id,
+        },
+        select: {
+          id: true,
+          userId: true,
+        },
+      },
       _count: {
         select: {
           participants: true,
@@ -70,9 +103,12 @@ export async function getGameSessions(options?: { includeArchived?: boolean }) {
   });
 }
 
-export async function getGameSessionById(id: string) {
-  return prisma.gameSession.findUnique({
-    where: { id },
+export async function getGameSessionById(id: string, actor: AuthorizationActor) {
+  return prisma.gameSession.findFirst({
+    where: {
+      id,
+      ...buildSessionVisibilityWhere(actor),
+    },
     include: {
       group: {
         select: {
@@ -84,6 +120,29 @@ export async function getGameSessionById(id: string) {
         select: {
           id: true,
           name: true,
+        },
+      },
+      ownerUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      trustedAdmins: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          user: {
+            name: "asc",
+          },
         },
       },
       participants: {
@@ -104,23 +163,37 @@ export async function getGameSessionById(id: string) {
 }
 
 export async function createGameSession(
-  input: GameSessionInput & { createdByUserId?: string | null; source?: "MANUAL" | "ONLINE" },
+  input: GameSessionInput & {
+    ownerUserId: string;
+    createdByUserId?: string | null;
+    source?: "MANUAL" | "ONLINE";
+  },
   tx?: Prisma.TransactionClient,
 ) {
   const db = tx ?? prisma;
+  let groupTrustedAdminUserIds: string[] = [];
 
   if (input.groupId) {
-    await assertGroupExists(input.groupId, db);
+    const group = await assertGroupExists(input.groupId, db);
+    groupTrustedAdminUserIds = group.trustedAdmins.map((entry) => entry.userId);
   }
+
+  const trustedAdminUserIds = uniqueIds([input.ownerUserId, ...groupTrustedAdminUserIds, ...input.trustedAdminUserIds]);
 
   return db.gameSession.create({
     data: {
       groupId: input.groupId,
+      ownerUserId: input.ownerUserId,
       title: input.title,
       playedAt: input.playedAt,
       notes: input.notes,
       source: input.source,
       createdByUserId: input.createdByUserId ?? null,
+      trustedAdmins: {
+        create: trustedAdminUserIds.map((userId) => ({
+          userId,
+        })),
+      },
     },
   });
 }
@@ -230,6 +303,58 @@ export async function setSessionParticipants(input: SessionParticipantsUpdateInp
   });
 }
 
+export async function setSessionTrustedAdmins(
+  input: { gameSessionId: string; ownerUserId: string; groupId?: string | null; trustedAdminUserIds: string[] },
+  tx?: Prisma.TransactionClient,
+) {
+  const db = tx ?? prisma;
+
+  let inheritedGroupTrustedAdminUserIds: string[] = [];
+
+  if (input.groupId) {
+    const group = await assertGroupExists(input.groupId, db);
+    inheritedGroupTrustedAdminUserIds = group.trustedAdmins.map((entry) => entry.userId);
+  }
+
+  const dedupedUserIds = uniqueIds([
+    input.ownerUserId,
+    ...inheritedGroupTrustedAdminUserIds,
+    ...input.trustedAdminUserIds,
+  ]);
+
+  const existingUsers = await db.user.findMany({
+    where: {
+      id: {
+        in: dedupedUserIds,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingUsers.length !== dedupedUserIds.length) {
+    throw new Error("One or more selected trusted admins no longer exist.");
+  }
+
+  await db.gameSessionTrustedAdmin.deleteMany({
+    where: {
+      gameSessionId: input.gameSessionId,
+      userId: {
+        notIn: dedupedUserIds,
+      },
+    },
+  });
+
+  await db.gameSessionTrustedAdmin.createMany({
+    data: dedupedUserIds.map((userId) => ({
+      gameSessionId: input.gameSessionId,
+      userId,
+    })),
+    skipDuplicates: true,
+  });
+}
+
 export async function archiveGameSession(id: string, tx?: Prisma.TransactionClient) {
   const db = tx ?? prisma;
 
@@ -250,4 +375,72 @@ export async function unarchiveGameSession(id: string, tx?: Prisma.TransactionCl
       archivedAt: null,
     },
   });
+}
+
+export async function getGameSessionAuthorizationContext(
+  gameSessionId: string,
+  actor: AuthorizationActor,
+): Promise<SessionAuthorizationContext | null> {
+  const session = await prisma.gameSession.findUnique({
+    where: {
+      id: gameSessionId,
+    },
+    select: {
+      ownerUserId: true,
+      trustedAdmins: {
+        where: {
+          userId: actor.id,
+        },
+        select: {
+          id: true,
+        },
+      },
+      participants: actor.playerId
+        ? {
+            where: {
+              playerId: actor.playerId,
+            },
+            select: {
+              id: true,
+            },
+          }
+        : false,
+      group: {
+        select: {
+          ownerUserId: true,
+          trustedAdmins: {
+            where: {
+              userId: actor.id,
+            },
+            select: {
+              id: true,
+            },
+          },
+          memberships: actor.playerId
+            ? {
+                where: {
+                  playerId: actor.playerId,
+                },
+                select: {
+                  id: true,
+                },
+              }
+            : false,
+        },
+      },
+    },
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    isOwner: session.ownerUserId === actor.id,
+    isTrustedAdmin: session.trustedAdmins.length > 0,
+    isParticipant: actor.playerId ? session.participants.length > 0 : false,
+    isLinkedGroupOwner: session.group ? session.group.ownerUserId === actor.id : false,
+    isLinkedGroupTrustedAdmin: session.group ? session.group.trustedAdmins.length > 0 : false,
+    isLinkedGroupMember: actor.playerId && session.group ? session.group.memberships.length > 0 : false,
+  };
 }

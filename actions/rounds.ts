@@ -4,9 +4,11 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdminUser } from "@/lib/auth/guards";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditSession } from "@/lib/domain/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { createRound, deleteRound, updateRound } from "@/lib/db/rounds";
+import { getGameSessionAuthorizationContext } from "@/lib/db/sessions";
 import { roundCreateInputSchema, roundDeleteInputSchema, roundUpdateInputSchema } from "@/lib/validation/round";
 
 export type RoundFormState = {
@@ -51,7 +53,14 @@ export async function createRoundAction(
   _prevState: RoundFormState,
   formData: FormData,
 ): Promise<RoundFormState> {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
+  const sessionContext = await getGameSessionAuthorizationContext(gameSessionId, user);
+
+  if (!sessionContext || !canEditSession(user, sessionContext)) {
+    return {
+      message: "You are not allowed to edit rounds in this session.",
+    };
+  }
 
   const parsed = roundCreateInputSchema.safeParse({
     gameSessionId,
@@ -104,7 +113,14 @@ export async function updateRoundAction(
   _prevState: RoundFormState,
   formData: FormData,
 ): Promise<RoundFormState> {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
+  const sessionContext = await getGameSessionAuthorizationContext(gameSessionId, user);
+
+  if (!sessionContext || !canEditSession(user, sessionContext)) {
+    return {
+      message: "You are not allowed to edit rounds in this session.",
+    };
+  }
 
   const parsed = roundUpdateInputSchema.safeParse({
     id: roundId,
@@ -146,7 +162,12 @@ export async function updateRoundAction(
 }
 
 export async function deleteRoundAction(gameSessionId: string, roundId: string, groupId: string | null): Promise<void> {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
+  const sessionContext = await getGameSessionAuthorizationContext(gameSessionId, user);
+
+  if (!sessionContext || !canEditSession(user, sessionContext)) {
+    throw new Error("You are not allowed to edit rounds in this session.");
+  }
 
   const parsed = roundDeleteInputSchema.parse({
     id: roundId,

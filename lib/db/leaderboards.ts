@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { buildGroupVisibilityWhere, type AuthorizationActor } from "@/lib/domain/authorization";
 import { computeRatingsFromRoundHistory, type RatingRoundEvent } from "@/lib/rating/openskill";
 
 export type LeaderboardRow = {
@@ -201,6 +202,20 @@ export async function getGlobalLeaderboard(): Promise<LeaderboardRow[]> {
   return buildLeaderboard();
 }
 
-export async function getGroupLeaderboard(groupId: string): Promise<LeaderboardRow[]> {
+export async function getGroupLeaderboard(groupId: string, actor: AuthorizationActor): Promise<LeaderboardRow[] | null> {
+  const visibleGroup = await prisma.group.findFirst({
+    where: {
+      id: groupId,
+      ...buildGroupVisibilityWhere(actor),
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!visibleGroup) {
+    return null;
+  }
+
   return buildLeaderboard({ groupId });
 }

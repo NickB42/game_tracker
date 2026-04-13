@@ -15,12 +15,19 @@ type SelectableGroup = {
   name: string;
 };
 
+type SelectableUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 type SessionFormDefaults = {
   groupId?: string | null;
   title?: string | null;
   playedAt?: string;
   notes?: string | null;
   participantIds?: string[];
+  trustedAdminUserIds?: string[];
 };
 
 type SessionFormProps =
@@ -28,6 +35,7 @@ type SessionFormProps =
       mode: "create";
       selectablePlayers: SelectablePlayer[];
       selectableGroups: SelectableGroup[];
+      selectableUsers: SelectableUser[];
       defaultValues?: SessionFormDefaults;
     }
   | {
@@ -35,6 +43,7 @@ type SessionFormProps =
       gameSessionId: string;
       selectablePlayers: SelectablePlayer[];
       selectableGroups: SelectableGroup[];
+      selectableUsers: SelectableUser[];
       defaultValues: SessionFormDefaults;
     };
 
@@ -67,6 +76,7 @@ export function SessionForm(props: SessionFormProps) {
 
   const defaults = props.defaultValues;
   const selectedParticipantIds = new Set(defaults?.participantIds ?? []);
+  const selectedTrustedAdminUserIds = new Set(defaults?.trustedAdminUserIds ?? []);
   const playedAtDefault = defaults?.playedAt ? toDateTimeLocalInputValue(defaults.playedAt) : toDateTimeLocalInputValue(new Date().toISOString());
 
   return (
@@ -138,6 +148,35 @@ export function SessionForm(props: SessionFormProps) {
         />
         {state.fieldErrors?.notes ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.notes}</p> : null}
       </div>
+
+      <section>
+        <h2 className="text-sm font-medium text-zinc-900">Trusted session admins</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Trusted session admins can edit this session and rounds. Group trusted admins are auto-included when a group is selected.
+        </p>
+
+        <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+          {props.selectableUsers.length === 0 ? (
+            <p className="text-sm text-zinc-600">No users available yet.</p>
+          ) : (
+            props.selectableUsers.map((user) => (
+              <label key={user.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
+                <span className="text-sm text-zinc-800">
+                  {user.name}
+                  <span className="ml-2 text-xs text-zinc-500">({user.email})</span>
+                </span>
+                <input
+                  type="checkbox"
+                  name="trustedAdminUserIds"
+                  value={user.id}
+                  defaultChecked={selectedTrustedAdminUserIds.has(user.id)}
+                  className="size-4 rounded border-zinc-300"
+                />
+              </label>
+            ))
+          )}
+        </div>
+      </section>
 
       <section>
         <h2 className="text-sm font-medium text-zinc-900">Participants</h2>
