@@ -95,11 +95,6 @@ export function GroupForm(props: GroupFormProps) {
       </Field>
 
       <FormSection title="Trusted admins" description="Trusted admins can edit this group. Their permissions are copied to linked sessions when those sessions are created or edited.">
-        <p className="text-sm text-[var(--text-muted)]">
-          Trusted admins can edit this group. Their permissions are copied to linked sessions when those sessions are
-          created or edited.
-        </p>
-
         <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectableUsers.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No users available yet.</p>
@@ -127,8 +122,6 @@ export function GroupForm(props: GroupFormProps) {
       </FormSection>
 
       <FormSection title="Members" description="Select existing players to include in this group.">
-        <p className="text-sm text-[var(--text-muted)]">Select existing players to include in this group.</p>
-
         <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectablePlayers.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No players available yet.</p>
