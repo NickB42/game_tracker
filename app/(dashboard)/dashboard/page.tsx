@@ -33,16 +33,11 @@ export default async function DashboardPage() {
 
   return (
     <section className="space-y-6" data-testid="dashboard-auth-shell">
-      <PageHeader
-        title="Dashboard"
-        description="Overview of your account context and fast navigation into the tracker."
-        actions={<StatusBadge tone="accent">Signed In</StatusBadge>}
-      />
+      <PageHeader title="Dashboard" />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Role" value={user.role} tone="accent" />
         <StatCard label="Linked Player" value={user.playerId ? "Connected" : "Not linked"} tone={user.playerId ? "success" : "warning"} />
-        <StatCard label="Access" value="Invite Only" hint="Account creation is managed by admins" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -64,8 +59,8 @@ export default async function DashboardPage() {
             <AppButton href="/dashboard/leaderboards" variant="secondary" className="justify-start">
               Leaderboards
             </AppButton>
-            <AppButton href="/dashboard/settings/security" variant="ghost" className="justify-start">
-              Security Settings
+            <AppButton href="/dashboard/settings" variant="ghost" className="justify-start">
+              Settings
             </AppButton>
             {user.role === "ADMIN" ? (
               <AppButton href="/dashboard/admin/users" variant="ghost" className="justify-start">
@@ -97,8 +92,8 @@ export default async function DashboardPage() {
           <p className="mt-5 text-sm text-[var(--text-muted)]">
             Want to change credentials or review account security?
           </p>
-          <Link href="/dashboard/settings/security" className="app-button app-button-ghost mt-2 px-0">
-            Open security settings
+          <Link href="/dashboard/settings" className="app-button app-button-ghost mt-2 px-0">
+            Open settings
           </Link>
         </AppCard>
       </div>

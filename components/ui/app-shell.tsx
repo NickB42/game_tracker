@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+
 import {
   DashboardIcon,
   GroupIcon,
@@ -15,7 +16,6 @@ import {
   UsersIcon,
 } from "@/components/ui/icons";
 import { ToastProvider } from "@/components/ui/toast";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 type AppShellProps = {
   children: ReactNode;
@@ -39,7 +39,15 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/sessions", label: "Sessions", icon: <SessionIcon /> },
   { href: "/dashboard/leaderboards", label: "Leaderboards", icon: <TrophyIcon /> },
   { href: "/dashboard/online-play", label: "Online Play", icon: <OnlineIcon /> },
-  { href: "/dashboard/settings/security", label: "Settings", icon: <SettingsIcon /> },
+  { href: "/dashboard/settings", label: "Settings", icon: <SettingsIcon /> },
+];
+
+const MOBILE_TAB_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Home", icon: <DashboardIcon /> },
+  { href: "/dashboard/groups", label: "Groups", icon: <GroupIcon /> },
+  { href: "/dashboard/sessions", label: "Sessions", icon: <SessionIcon /> },
+  { href: "/dashboard/leaderboards", label: "Boards", icon: <TrophyIcon /> },
+  { href: "/dashboard/online-play", label: "Online", icon: <OnlineIcon /> },
 ];
 
 function isNavItemActive(pathname: string, href: string) {
@@ -78,16 +86,12 @@ export function AppShell({ children, user }: AppShellProps) {
             </div>
 
             <div className="flex items-center gap-3">
-              <ThemeToggle />
-
               <details className="app-user-menu">
                 <summary className="app-user-summary">
-                  <span className="app-badge app-badge-accent">{user.role}</span>
-                  <span className="text-sm font-medium text-[var(--text-primary)]">{user.name}</span>
+                  <span className={user.role === "ADMIN" ? "app-badge app-badge-accent" : "app-badge"}>{`Signed in · ${user.role}`}</span>
                 </summary>
                 <div className="app-user-panel">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{user.name}</p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">{user.email}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Log out of your account?</p>
                   <div className="app-divider my-3" />
                   <LogoutButton />
                 </div>
@@ -111,6 +115,25 @@ export function AppShell({ children, user }: AppShellProps) {
           </aside>
           <main className="min-w-0">{children}</main>
         </div>
+
+        <nav className="app-mobile-tabs" aria-label="Mobile primary navigation">
+          {MOBILE_TAB_ITEMS.map((item) => {
+            const active = isNavItemActive(pathname, item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={active ? "app-mobile-tab is-active" : "app-mobile-tab"}
+                aria-label={item.label}
+                title={item.label}
+              >
+                <span className="app-mobile-tab-icon">{item.icon}</span>
+                <span className="sr-only">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </ToastProvider>
   );

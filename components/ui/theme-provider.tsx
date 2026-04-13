@@ -28,7 +28,7 @@ function applyMode(mode: ThemeMode) {
 
 export function getStoredThemeMode(): ThemeMode {
   if (typeof window === "undefined") {
-    return "dark";
+    return "system";
   }
 
   const value = window.localStorage.getItem(STORAGE_KEY);
@@ -37,7 +37,7 @@ export function getStoredThemeMode(): ThemeMode {
     return value;
   }
 
-  return "dark";
+  return "system";
 }
 
 export function setThemeMode(mode: ThemeMode) {
