@@ -1,14 +1,25 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { SessionForm } from "@/components/sessions/session-form";
-import { requireAdminUser } from "@/lib/auth/guards";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canCreateSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
 import { getPlayers } from "@/lib/db/players";
+import { getAssignableUsers } from "@/lib/db/users";
 
 export default async function NewSessionPage() {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
 
-  const [groups, players] = await Promise.all([getGroups(), getPlayers({ includeInactive: true })]);
+  if (!canCreateSession(user)) {
+    redirect("/dashboard/sessions");
+  }
+
+  const [groups, players, users] = await Promise.all([
+    getGroups(user),
+    getPlayers({ includeInactive: true }),
+    getAssignableUsers(user),
+  ]);
 
   return (
     <section className="space-y-5">
@@ -25,6 +36,11 @@ export default async function NewSessionPage() {
       <SessionForm
         mode="create"
         selectableGroups={groups.map((group) => ({ id: group.id, name: group.name }))}
+        selectableUsers={users.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          email: entry.email,
+        }))}
         selectablePlayers={players.map((player) => ({
           id: player.id,
           displayName: player.displayName,

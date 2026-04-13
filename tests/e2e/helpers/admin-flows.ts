@@ -25,3 +25,18 @@ export async function createSessionViaUI(page: Page, sessionTitle: string, parti
   await expect(page).toHaveURL(/\/dashboard\/sessions\/.+/);
   await expect(page.getByTestId("session-detail-heading")).toContainText(sessionTitle);
 }
+
+export async function createGroupViaUI(page: Page, groupName: string, memberNames?: string[]) {
+  await page.goto("/dashboard/groups/new");
+
+  await page.getByLabel("Group name", { exact: true }).fill(groupName);
+
+  for (const memberName of memberNames ?? []) {
+    await page.getByLabel(memberName, { exact: true }).check();
+  }
+
+  await page.getByRole("button", { name: "Create group" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard\/groups\/.+/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(groupName);
+}

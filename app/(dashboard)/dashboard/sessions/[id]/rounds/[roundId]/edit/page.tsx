@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RoundForm } from "@/components/rounds/round-form";
-import { requireAdminUser } from "@/lib/auth/guards";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditSession } from "@/lib/domain/authorization";
 import { getRoundById } from "@/lib/db/rounds";
-import { getGameSessionById } from "@/lib/db/sessions";
+import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 
 type EditRoundPageProps = {
   params: Promise<{
@@ -14,12 +15,16 @@ type EditRoundPageProps = {
 };
 
 export default async function EditRoundPage({ params }: EditRoundPageProps) {
-  await requireAdminUser();
+  const user = await requireAuthenticatedUser();
   const { id, roundId } = await params;
 
-  const [gameSession, round] = await Promise.all([getGameSessionById(id), getRoundById(roundId)]);
+  const [gameSession, sessionContext, round] = await Promise.all([
+    getGameSessionById(id, user),
+    getGameSessionAuthorizationContext(id, user),
+    getRoundById(roundId),
+  ]);
 
-  if (!gameSession || !round || round.gameSessionId !== gameSession.id) {
+  if (!gameSession || !sessionContext || !canEditSession(user, sessionContext) || !round || round.gameSessionId !== gameSession.id) {
     notFound();
   }
 

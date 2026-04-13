@@ -10,24 +10,34 @@ type SelectablePlayer = {
   isActive: boolean;
 };
 
+type SelectableUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 type GroupFormProps =
   | {
       mode: "create";
       selectablePlayers: SelectablePlayer[];
+      selectableUsers: SelectableUser[];
       defaultValues?: {
         name?: string;
         description?: string | null;
         memberPlayerIds?: string[];
+        trustedAdminUserIds?: string[];
       };
     }
   | {
       mode: "edit";
       groupId: string;
       selectablePlayers: SelectablePlayer[];
+      selectableUsers: SelectableUser[];
       defaultValues: {
         name: string;
         description?: string | null;
         memberPlayerIds: string[];
+        trustedAdminUserIds: string[];
       };
     };
 
@@ -39,6 +49,7 @@ export function GroupForm(props: GroupFormProps) {
 
   const defaults = props.defaultValues;
   const selectedSet = new Set(defaults?.memberPlayerIds ?? []);
+  const selectedTrustedAdminSet = new Set(defaults?.trustedAdminUserIds ?? []);
 
   return (
     <form action={formAction} className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -75,6 +86,39 @@ export function GroupForm(props: GroupFormProps) {
           <p className="mt-1 text-sm text-red-600">{state.fieldErrors.description}</p>
         ) : null}
       </div>
+
+      <section>
+        <h2 className="text-sm font-medium text-zinc-900">Trusted admins</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Trusted admins can edit this group. Their permissions are copied to linked sessions when those sessions are
+          created or edited.
+        </p>
+
+        <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+          {props.selectableUsers.length === 0 ? (
+            <p className="text-sm text-zinc-600">No users available yet.</p>
+          ) : (
+            props.selectableUsers.map((user) => (
+              <label key={user.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
+                <span className="text-sm text-zinc-800">
+                  {user.name}
+                  {user.email ? <span className="ml-2 text-xs text-zinc-500">({user.email})</span> : null}
+                </span>
+                <input
+                  type="checkbox"
+                  name="trustedAdminUserIds"
+                  value={user.id}
+                  defaultChecked={selectedTrustedAdminSet.has(user.id)}
+                  className="size-4 rounded border-zinc-300"
+                />
+              </label>
+            ))
+          )}
+        </div>
+        {state.fieldErrors?.trustedAdminUserIds ? (
+          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.trustedAdminUserIds}</p>
+        ) : null}
+      </section>
 
       <section>
         <h2 className="text-sm font-medium text-zinc-900">Members</h2>

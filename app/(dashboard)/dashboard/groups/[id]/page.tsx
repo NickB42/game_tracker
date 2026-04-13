@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { canEditGroup } from "@/lib/domain/authorization";
 import { getGroupById } from "@/lib/db/groups";
 
 type GroupDetailPageProps = {
@@ -13,11 +14,17 @@ type GroupDetailPageProps = {
 export default async function GroupDetailPage({ params }: GroupDetailPageProps) {
   const user = await requireAuthenticatedUser();
   const { id } = await params;
-  const group = await getGroupById(id);
+  const group = await getGroupById(id, user);
 
   if (!group) {
     notFound();
   }
+
+  const canManageGroup = canEditGroup(user, {
+    isOwner: group.ownerUserId === user.id,
+    isTrustedAdmin: group.trustedAdmins.some((entry) => entry.userId === user.id),
+    isMember: user.playerId ? group.memberships.some((membership) => membership.playerId === user.playerId) : false,
+  });
 
   return (
     <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -33,7 +40,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
           <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/leaderboards/groups/${group.id}`}>
             Group leaderboard
           </Link>
-          {user.role === "ADMIN" ? (
+          {canManageGroup ? (
             <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/groups/${group.id}/edit`}>
               Edit group
             </Link>
@@ -50,14 +57,38 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
       <dl className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
         <div className="flex items-center justify-between px-4 py-3 text-sm">
+          <dt className="font-medium text-zinc-700">Owner</dt>
+          <dd className="text-zinc-900">{group.owner.name}</dd>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 text-sm">
           <dt className="font-medium text-zinc-700">Members</dt>
           <dd className="text-zinc-900">{group.memberships.length}</dd>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 text-sm">
+          <dt className="font-medium text-zinc-700">Trusted admins</dt>
+          <dd className="text-zinc-900">{group.trustedAdmins.length}</dd>
         </div>
         <div className="flex items-center justify-between px-4 py-3 text-sm">
           <dt className="font-medium text-zinc-700">Game sessions</dt>
           <dd className="text-zinc-900">{group._count.gameSessions}</dd>
         </div>
       </dl>
+
+      <section>
+        <h2 className="text-lg font-semibold text-zinc-900">Trusted admins</h2>
+        {group.trustedAdmins.length === 0 ? (
+          <p className="mt-2 text-sm text-zinc-600">No trusted admins assigned.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+            {group.trustedAdmins.map((trustedAdmin) => (
+              <li key={trustedAdmin.id} className="px-4 py-3 text-sm text-zinc-800">
+                {trustedAdmin.user.name}
+                <span className="ml-2 text-xs text-zinc-500">({trustedAdmin.user.email})</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section>
         <h2 className="text-lg font-semibold text-zinc-900">Members</h2>

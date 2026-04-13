@@ -4,8 +4,8 @@ import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGroups } from "@/lib/db/groups";
 
 export default async function LeaderboardsIndexPage() {
-  await requireAuthenticatedUser();
-  const groups = await getGroups();
+  const user = await requireAuthenticatedUser();
+  const groups = await getGroups(user);
 
   return (
     <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
