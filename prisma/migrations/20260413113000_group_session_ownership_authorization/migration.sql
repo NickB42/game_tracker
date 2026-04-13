@@ -5,8 +5,12 @@ ALTER TABLE "GameSession" ADD COLUMN "ownerUserId" TEXT;
 -- We need a deterministic fallback for legacy rows where no creator is stored.
 -- Fallback rule: earliest user by createdAt ASC, then id ASC.
 DO $$
+DECLARE
+  has_legacy_data BOOLEAN;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM "user") THEN
+  SELECT EXISTS(SELECT 1 FROM "Group") OR EXISTS(SELECT 1 FROM "GameSession") INTO has_legacy_data;
+
+  IF has_legacy_data AND NOT EXISTS (SELECT 1 FROM "user") THEN
     RAISE EXCEPTION 'Authorization ownership migration requires at least one user in "user" table.';
   END IF;
 END $$;
