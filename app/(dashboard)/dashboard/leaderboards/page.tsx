@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AppButton, EmptyState, PageHeader, SectionCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGroups } from "@/lib/db/groups";
 
@@ -8,40 +9,37 @@ export default async function LeaderboardsIndexPage() {
   const groups = await getGroups(user);
 
   return (
-    <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-zinc-900">Leaderboards</h1>
-        <p className="text-sm text-zinc-600">
-          View OpenSkill ratings replayed from round history, plus derived round wins and session match wins.
-        </p>
-      </header>
+    <section className="space-y-6">
+      <PageHeader
+        title="Leaderboards"
+        description="OpenSkill ratings replayed from round history with derived round and match wins."
+        actions={<AppButton href="/dashboard/leaderboards/global">Open global leaderboard</AppButton>}
+      />
 
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/dashboard/leaderboards/global"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-        >
-          Open global leaderboard
-        </Link>
-      </div>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-900">Group leaderboards</h2>
+      <SectionCard
+        title="Group leaderboards"
+        description="Scope ratings to sessions linked with each group for localized performance tracking."
+        actions={<StatusBadge tone="accent">{groups.length} Groups</StatusBadge>}
+      >
         {groups.length === 0 ? (
-          <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">No groups created yet.</p>
+          <EmptyState
+            title="No groups available"
+            description="Create a group first to unlock per-group leaderboard views."
+            action={<AppButton variant="secondary" href="/dashboard/groups/new">Create group</AppButton>}
+          />
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+          <ul className="divide-y divide-[var(--border)] rounded-[var(--radius-md)] border border-[var(--border)]">
             {groups.map((group) => (
-              <li key={group.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="font-medium text-zinc-900">{group.name}</span>
-                <Link className="underline" href={`/dashboard/leaderboards/groups/${group.id}`}>
+              <li key={group.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                <span className="font-medium text-[var(--text-primary)]">{group.name}</span>
+                <Link className="app-button app-button-secondary" href={`/dashboard/leaderboards/groups/${group.id}`}>
                   Open leaderboard
                 </Link>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </SectionCard>
     </section>
   );
 }

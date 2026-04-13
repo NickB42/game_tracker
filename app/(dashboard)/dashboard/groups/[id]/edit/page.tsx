@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { GroupForm } from "@/components/groups/group-form";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditGroup } from "@/lib/domain/authorization";
 import { getGroupAuthorizationContext, getGroupById } from "@/lib/db/groups";
@@ -29,21 +30,24 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
     notFound();
   }
 
+  type GroupRecord = NonNullable<Awaited<ReturnType<typeof getGroupById>>>;
+  const groupRecord: GroupRecord = group;
+
   return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Edit group</h1>
-          <p className="mt-1 text-sm text-zinc-600">Update group details and synchronize members.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/groups/${group.id}`}>
-          Back to group
-        </Link>
-      </div>
+    <section className="space-y-6">
+      <PageHeader
+        title="Edit group"
+        description="Update group details and synchronize members."
+        actions={
+          <Link className="app-button app-button-secondary" href={`/dashboard/groups/${groupRecord.id}`}>
+            Back to group
+          </Link>
+        }
+      />
 
       <GroupForm
         mode="edit"
-        groupId={group.id}
+        groupId={groupRecord.id}
         selectableUsers={users.map((entry) => ({
           id: entry.id,
           name: entry.name,
@@ -55,10 +59,10 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
           isActive: player.isActive,
         }))}
         defaultValues={{
-          name: group.name,
-          description: group.description,
-          memberPlayerIds: group.memberships.map((membership) => membership.playerId),
-          trustedAdminUserIds: group.trustedAdmins.map((entry) => entry.userId),
+          name: groupRecord.name,
+          description: groupRecord.description,
+          memberPlayerIds: groupRecord.memberships.map((membership) => membership.playerId),
+          trustedAdminUserIds: groupRecord.trustedAdmins.map((entry) => entry.userId),
         }}
       />
     </section>

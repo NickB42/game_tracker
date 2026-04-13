@@ -22,8 +22,8 @@ export function GameEventLog({ events }: GameEventLogProps) {
   const recent = events.slice(-12);
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-3">
-      <p className="text-xs uppercase tracking-wide text-zinc-500">Recent events</p>
+    <div className="app-card-muted rounded-xl p-3">
+      <p className="app-caption uppercase tracking-wide">Recent events</p>
       <ul className="mt-2 space-y-2">
         <AnimatePresence initial={false}>
           {recent.map((event) => (
@@ -33,10 +33,10 @@ export function GameEventLog({ events }: GameEventLogProps) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="rounded-lg border border-zinc-100 bg-zinc-50 px-2 py-1"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1"
             >
-              <p className="text-xs font-semibold text-zinc-800">{event.type}</p>
-              <p className="text-[11px] text-zinc-500">{formatEventTime(event.createdAt)}</p>
+              <p className="text-xs font-semibold text-[var(--text-secondary)]">{event.type}</p>
+              <p className="text-[11px] text-[var(--text-muted)]">{formatEventTime(event.createdAt)}</p>
             </motion.li>
           ))}
         </AnimatePresence>

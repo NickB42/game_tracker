@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import {
   resetManagedUserPasswordAction,
@@ -8,6 +8,8 @@ import {
   type AdminResetPasswordFormState,
   type AdminUserFormState,
 } from "@/actions/admin-users";
+import { Field, FormSection } from "@/components/ui/form-primitives";
+import { useToast } from "@/components/ui/toast";
 
 type PlayerOption = {
   id: string;
@@ -29,6 +31,8 @@ type UserEditFormProps = {
 export function UserEditForm({ user, players }: UserEditFormProps) {
   const updateAction = updateManagedUserAction.bind(null, user.id);
   const resetPasswordAction = resetManagedUserPasswordAction.bind(null, user.id);
+  const { pushToast } = useToast();
+  const lastFeedbackRef = useRef<string | null>(null);
 
   const updateInitialState: AdminUserFormState = {};
   const resetInitialState: AdminResetPasswordFormState = {};
@@ -36,64 +40,78 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
   const [updateState, updateFormAction, isUpdating] = useActionState(updateAction, updateInitialState);
   const [passwordState, passwordFormAction, isResetting] = useActionState(resetPasswordAction, resetInitialState);
 
+  useEffect(() => {
+    const message = updateState.message ?? passwordState.message;
+    const success = updateState.success ?? passwordState.success;
+
+    if (message) {
+      const key = `error:${message}`;
+
+      if (key === lastFeedbackRef.current) {
+        return;
+      }
+
+      lastFeedbackRef.current = key;
+      pushToast({ title: "User update failed", description: message, tone: "error" });
+      return;
+    }
+
+    if (success) {
+      const key = `success:${success}`;
+
+      if (key === lastFeedbackRef.current) {
+        return;
+      }
+
+      lastFeedbackRef.current = key;
+      pushToast({ title: "User updated", description: success, tone: "success" });
+    }
+  }, [passwordState.message, passwordState.success, pushToast, updateState.message, updateState.success]);
+
   return (
     <div className="space-y-5">
-      <form action={updateFormAction} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <form action={updateFormAction} className="app-card space-y-4 p-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-zinc-700">
-              Email
-            </label>
+          <Field id="email" label="Email" hint="Email is immutable after account creation.">
             <input
               id="email"
               type="email"
               value={user.email}
               disabled
-              className="w-full cursor-not-allowed rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-700"
+              className="app-input cursor-not-allowed opacity-70"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label htmlFor="name" className="mb-1 block text-sm font-medium text-zinc-700">
-              Name
-            </label>
+          <Field id="name" label="Name" error={updateState.fieldErrors?.name}>
             <input
               id="name"
               name="name"
               type="text"
               maxLength={80}
               defaultValue={user.name}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              className="app-input"
               required
             />
-            {updateState.fieldErrors?.name ? <p className="mt-1 text-sm text-red-600">{updateState.fieldErrors.name}</p> : null}
-          </div>
+          </Field>
 
-          <div>
-            <label htmlFor="role" className="mb-1 block text-sm font-medium text-zinc-700">
-              Role
-            </label>
+          <Field id="role" label="Role" error={updateState.fieldErrors?.role}>
             <select
               id="role"
               name="role"
               defaultValue={user.role}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              className="app-select"
             >
               <option value="MEMBER">Member</option>
               <option value="ADMIN">Admin</option>
             </select>
-            {updateState.fieldErrors?.role ? <p className="mt-1 text-sm text-red-600">{updateState.fieldErrors.role}</p> : null}
-          </div>
+          </Field>
 
-          <div className="sm:col-span-2">
-            <label htmlFor="playerId" className="mb-1 block text-sm font-medium text-zinc-700">
-              Linked player
-            </label>
+          <Field id="playerId" label="Linked player" error={updateState.fieldErrors?.playerId}>
             <select
               id="playerId"
               name="playerId"
               defaultValue={user.playerId ?? ""}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              className="app-select"
             >
               <option value="">No linked player</option>
               {players.map((player) => (
@@ -102,26 +120,25 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
                 </option>
               ))}
             </select>
-            {updateState.fieldErrors?.playerId ? <p className="mt-1 text-sm text-red-600">{updateState.fieldErrors.playerId}</p> : null}
-          </div>
+          </Field>
         </div>
 
-        <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+        <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <input
             type="checkbox"
             name="mustChangePassword"
             defaultChecked={user.mustChangePassword}
-            className="size-4 rounded border-zinc-300"
+            className="size-4 rounded border-[var(--border)]"
           />
           Require password change on next login
         </label>
 
         {updateState.message ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{updateState.message}</div>
+          <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">{updateState.message}</div>
         ) : null}
 
         {updateState.success ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          <div className="rounded-[var(--radius-sm)] border border-[color:color-mix(in_srgb,var(--success)_45%,var(--border))] bg-[color:color-mix(in_srgb,var(--success)_14%,transparent)] px-3 py-2 text-sm text-[var(--success)]">
             {updateState.success}
           </div>
         ) : null}
@@ -129,65 +146,55 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
         <button
           type="submit"
           disabled={isUpdating}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isUpdating ? "Saving..." : "Save user details"}
         </button>
       </form>
 
-      <form action={passwordFormAction} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900">Reset password</h2>
+      <form action={passwordFormAction} className="app-card space-y-4 p-6">
+        <FormSection title="Reset password" description="Set a temporary password and session policy updates.">
+          <div />
+        </FormSection>
 
-        <div>
-          <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-zinc-700">
-            New temporary password
-          </label>
+        <Field id="newPassword" label="New temporary password" error={passwordState.fieldErrors?.newPassword}>
           <input
             id="newPassword"
             name="newPassword"
             type="password"
             autoComplete="new-password"
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+            className="app-input"
             required
           />
-          {passwordState.fieldErrors?.newPassword ? (
-            <p className="mt-1 text-sm text-red-600">{passwordState.fieldErrors.newPassword}</p>
-          ) : null}
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="confirmNewPassword" className="mb-1 block text-sm font-medium text-zinc-700">
-            Confirm new temporary password
-          </label>
+        <Field id="confirmNewPassword" label="Confirm new temporary password" error={passwordState.fieldErrors?.confirmNewPassword}>
           <input
             id="confirmNewPassword"
             name="confirmNewPassword"
             type="password"
             autoComplete="new-password"
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+            className="app-input"
             required
           />
-          {passwordState.fieldErrors?.confirmNewPassword ? (
-            <p className="mt-1 text-sm text-red-600">{passwordState.fieldErrors.confirmNewPassword}</p>
-          ) : null}
-        </div>
+        </Field>
 
-        <label className="block text-sm text-zinc-700">
-          <input type="checkbox" name="mustChangePassword" defaultChecked className="mr-2 size-4 rounded border-zinc-300" />
+        <label className="block text-sm text-[var(--text-secondary)]">
+          <input type="checkbox" name="mustChangePassword" defaultChecked className="mr-2 size-4 rounded border-[var(--border)]" />
           Force password change on next login
         </label>
 
-        <label className="block text-sm text-zinc-700">
-          <input type="checkbox" name="revokeExistingSessions" className="mr-2 size-4 rounded border-zinc-300" />
+        <label className="block text-sm text-[var(--text-secondary)]">
+          <input type="checkbox" name="revokeExistingSessions" className="mr-2 size-4 rounded border-[var(--border)]" />
           Revoke active sessions for this user
         </label>
 
         {passwordState.message ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{passwordState.message}</div>
+          <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">{passwordState.message}</div>
         ) : null}
 
         {passwordState.success ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          <div className="rounded-[var(--radius-sm)] border border-[color:color-mix(in_srgb,var(--success)_45%,var(--border))] bg-[color:color-mix(in_srgb,var(--success)_14%,transparent)] px-3 py-2 text-sm text-[var(--success)]">
             {passwordState.success}
           </div>
         ) : null}
@@ -195,7 +202,7 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
         <button
           type="submit"
           disabled={isResetting}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isResetting ? "Updating..." : "Set temporary password"}
         </button>

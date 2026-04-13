@@ -2,8 +2,11 @@ import Link from "next/link";
 
 import { createOnlineLobbyAction } from "@/actions/online";
 import { JoinLobbyForm } from "@/components/online/join-lobby-form";
+import { EmptyState, PageHeader, SectionCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { listOpenOnlineLobbies } from "@/lib/db/online";
+
+type OpenLobbyView = Awaited<ReturnType<typeof listOpenOnlineLobbies>>[number];
 
 export default async function OnlinePlayPage() {
   const user = await requireAuthenticatedUser();
@@ -11,46 +14,53 @@ export default async function OnlinePlayPage() {
 
   return (
     <section className="space-y-6" data-testid="online-play-page">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">Online Play</h1>
-        <p className="mt-2 text-sm text-zinc-600">Create or join invite-only online Shithead lobbies.</p>
+      <PageHeader
+        title="Online Play"
+        description="Create and join private Shithead lobbies with reconnect support and live state sync."
+        actions={<StatusBadge tone="accent">{lobbies.length} Open</StatusBadge>}
+      />
 
-        <form action={createOnlineLobbyAction} className="mt-4">
-          {user.role === "ADMIN" ? (
-            <label className="mb-3 flex items-center gap-2 text-sm text-zinc-700">
-              <input type="checkbox" name="debugShortDeck" value="1" className="size-4 rounded border-zinc-300" />
-              Use short deck (faster debug rounds)
-            </label>
-          ) : null}
-          <button
-            type="submit"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-          >
-            Create lobby
-          </button>
-        </form>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SectionCard title="Create Lobby" description="Start a fresh private lobby and share the invite code with players.">
+          <form action={createOnlineLobbyAction} className="space-y-4">
+            {user.role === "ADMIN" ? (
+              <label className="app-card-muted flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)]">
+                <input type="checkbox" name="debugShortDeck" value="1" className="size-4 rounded border-[var(--border)]" />
+                Use short deck (faster debug rounds)
+              </label>
+            ) : null}
+            <button type="submit" className="app-button app-button-primary">
+              Create lobby
+            </button>
+          </form>
+        </SectionCard>
+
+        <JoinLobbyForm />
       </div>
 
-      <JoinLobbyForm />
-
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900">Open Lobbies</h2>
-
+      <SectionCard title="Open Lobbies" description="Available rooms you can join or reconnect to.">
         {lobbies.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-600">No open lobbies right now.</p>
+          <EmptyState
+            title="No open lobbies"
+            description="Create a lobby to start online play, then share the join code."
+          />
         ) : (
-          <ul className="mt-4 space-y-3">
+          <ul className="grid gap-3 md:grid-cols-2">
             {lobbies.map((lobby) => {
               const containsCurrentUser = lobby.players.some((player) => player.userId === user.id);
 
               return (
-                <li key={lobby.id} className="rounded-lg border border-zinc-200 p-3 text-sm">
-                  <p className="font-medium text-zinc-900">Code: {lobby.code}</p>
-                  <p className="text-zinc-600">Status: {lobby.status}</p>
-                  <p className="text-zinc-600">Players: {lobby.playerCount}/5</p>
-                  <p className="text-zinc-600">Seats: {lobby.players.map((player) => player.name).join(", ") || "-"}</p>
+                <li key={lobby.id} className="app-card-muted space-y-3 p-4 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold tracking-[0.08em] text-[var(--text-primary)]">{lobby.code}</p>
+                    <StatusBadge tone="accent">{lobby.status}</StatusBadge>
+                  </div>
+
+                  <p className="text-[var(--text-muted)]">Players: {lobby.playerCount}/5</p>
+                  <p className="text-[var(--text-muted)]">Seats: {lobby.players.map((player) => player.name).join(", ") || "-"}</p>
+
                   {containsCurrentUser ? (
-                    <Link href={`/dashboard/online-play/${lobby.id}`} className="mt-2 inline-block text-sm font-medium text-zinc-900 underline">
+                    <Link href={`/dashboard/online-play/${lobby.id}`} className="app-button app-button-secondary">
                       Reconnect
                     </Link>
                   ) : null}
@@ -59,7 +69,7 @@ export default async function OnlinePlayPage() {
             })}
           </ul>
         )}
-      </div>
+      </SectionCard>
     </section>
   );
 }

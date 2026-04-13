@@ -51,7 +51,7 @@ export async function changeOwnPasswordAction(
   }
 
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/settings/security");
+  revalidatePath("/dashboard/settings");
   revalidatePath("/force-password-change");
 
   return {

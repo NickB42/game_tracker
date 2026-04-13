@@ -2,10 +2,45 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteRoundAction } from "@/actions/rounds";
+import { AppButton, DataTable, Divider, EmptyState, InfoRow, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getRoundsByGameSessionId, getSessionRoundSummary } from "@/lib/db/rounds";
 import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
+
+type SessionDetailView = {
+  id: string;
+  title: string | null;
+  playedAt: Date;
+  notes: string | null;
+  groupId: string | null;
+  group: { id: string; name: string } | null;
+  ownerUser: { id: string; name: string };
+  createdByUser: { id: string; name: string } | null;
+  trustedAdmins: Array<{ id: string; userId: string; user: { id: string; name: string; email: string } }>;
+  participants: Array<{ id: string; player: { id: string; displayName: string; isActive: boolean } }>;
+};
+
+type RoundView = {
+  id: string;
+  sequenceNumber: number;
+  notes: string | null;
+  placements: Array<{
+    id: string;
+    sessionParticipant: {
+      player: {
+        id: string;
+        displayName: string;
+      };
+    };
+  }>;
+};
+
+type SessionSummaryView = {
+  roundsPlayed: number;
+  participants: Array<{ sessionParticipantId: string; playerId: string; playerDisplayName: string; roundWins: number }>;
+  matchWinnerSessionParticipantIds: string[];
+};
 
 type GameSessionDetailPageProps = {
   params: Promise<{
@@ -24,16 +59,19 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
   const user = await requireAuthenticatedUser();
   const { id } = await params;
 
-  const [gameSession, sessionContext] = await Promise.all([
+  const [gameSessionRaw, sessionContext] = await Promise.all([
     getGameSessionById(id, user),
     getGameSessionAuthorizationContext(id, user),
   ]);
 
-  if (!gameSession || !sessionContext) {
+  if (!gameSessionRaw || !sessionContext) {
     notFound();
   }
 
-  const [rounds, summary] = await Promise.all([getRoundsByGameSessionId(id), getSessionRoundSummary(id)]);
+  const [roundsRaw, summaryRaw] = await Promise.all([getRoundsByGameSessionId(id), getSessionRoundSummary(id)]);
+  const gameSession = gameSessionRaw as unknown as SessionDetailView;
+  const rounds = roundsRaw as RoundView[];
+  const summary = summaryRaw as SessionSummaryView;
 
   const canManageSession = canEditSession(user, sessionContext);
 
@@ -44,183 +82,166 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
   );
 
   return (
-    <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900" data-testid="session-detail-heading">
-            {gameSession.title ?? "Untitled session"}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-600">One session is one game night; rounds capture each short game in order.</p>
-        </div>
-        <div className="flex gap-3">
-          <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/sessions">
-            Back to sessions
-          </Link>
-          <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/leaderboards/global">
-            Global leaderboard
-          </Link>
-          {canManageSession ? (
-            <>
-              <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/sessions/${gameSession.id}/edit`}>
-                Edit session
-              </Link>
-              <Link
-                className="text-sm font-medium text-zinc-900 underline"
-                href={`/dashboard/sessions/${gameSession.id}/rounds/new`}
-                data-testid="session-add-round-link"
-              >
-                Add round
-              </Link>
-            </>
-          ) : null}
-        </div>
-      </header>
+    <section className="space-y-6">
+      <PageHeader
+        title={gameSession.title ?? "Untitled session"}
+        description="One session is one game night; rounds capture each short game in order."
+        actions={
+          <>
+            <AppButton href="/dashboard/sessions" variant="ghost">
+              Back to Sessions
+            </AppButton>
+            <AppButton href="/dashboard/leaderboards/global" variant="secondary">
+              Global Leaderboard
+            </AppButton>
+            {canManageSession ? (
+              <>
+                <AppButton href={`/dashboard/sessions/${gameSession.id}/edit`} variant="secondary">
+                  Edit Session
+                </AppButton>
+                <AppButton href={`/dashboard/sessions/${gameSession.id}/rounds/new`} data-testid="session-add-round-link">
+                  Add Round
+                </AppButton>
+              </>
+            ) : null}
+          </>
+        }
+      />
 
-      <dl className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Played at</dt>
-          <dd className="text-zinc-900">{formatDateTime(gameSession.playedAt)}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Group</dt>
-          <dd className="text-zinc-900">
-            {gameSession.group ? (
-              <Link className="underline" href={`/dashboard/groups/${gameSession.group.id}`}>
-                {gameSession.group.name}
-              </Link>
-            ) : (
-              "No group"
-            )}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Owner</dt>
-          <dd className="text-zinc-900">{gameSession.ownerUser.name}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Created by</dt>
-          <dd className="text-zinc-900">{gameSession.createdByUser?.name ?? "Unknown"}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Trusted admins</dt>
-          <dd className="text-zinc-900">{gameSession.trustedAdmins.length}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Participants</dt>
-          <dd className="text-zinc-900">{gameSession.participants.length}</dd>
-        </div>
-      </dl>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Played at" value={formatDateTime(gameSession.playedAt)} />
+        <StatCard label="Participants" value={gameSession.participants.length} tone="accent" />
+        <StatCard label="Trusted admins" value={gameSession.trustedAdmins.length} tone="warning" />
+        <StatCard
+          label="Winner"
+          value={matchWinnerNameSet.size > 0 ? [...matchWinnerNameSet].join(", ") : "No winner yet"}
+          tone={matchWinnerNameSet.size > 0 ? "success" : "default"}
+        />
+      </div>
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Trusted admins</h2>
-        {gameSession.trustedAdmins.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600">No trusted admins assigned.</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-            {gameSession.trustedAdmins.map((trustedAdmin) => (
-              <li key={trustedAdmin.id} className="px-4 py-3 text-sm text-zinc-800">
-                {trustedAdmin.user.name}
-                <span className="ml-2 text-xs text-zinc-500">({trustedAdmin.user.email})</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <SectionCard title="Session Overview">
+          <dl className="divide-y divide-[var(--border)] rounded-[var(--radius-md)] border border-[var(--border)]">
+            <InfoRow
+              label="Group"
+              value={
+                gameSession.group ? (
+                  <Link className="underline" href={`/dashboard/groups/${gameSession.group.id}`}>
+                    {gameSession.group.name}
+                  </Link>
+                ) : (
+                  "No group"
+                )
+              }
+            />
+            <InfoRow label="Owner" value={gameSession.ownerUser.name} />
+            <InfoRow label="Created by" value={gameSession.createdByUser?.name ?? "Unknown"} />
+            <InfoRow label="Rounds played" value={summary.roundsPlayed} />
+          </dl>
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Session summary</h2>
-        <dl className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-          <div className="flex items-center justify-between px-4 py-3 text-sm">
-            <dt className="font-medium text-zinc-700">Rounds played</dt>
-            <dd className="text-zinc-900">{summary.roundsPlayed}</dd>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3 text-sm">
-            <dt className="font-medium text-zinc-700">Derived match winner(s)</dt>
-            <dd className="text-zinc-900">{matchWinnerNameSet.size > 0 ? [...matchWinnerNameSet].join(", ") : "No winner yet"}</dd>
-          </div>
-        </dl>
+          <Divider className="my-5" />
 
-        {summary.participants.length > 0 ? (
-          <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200">
-            <table className="min-w-full divide-y divide-zinc-200 text-sm">
-              <thead className="bg-zinc-50 text-left text-zinc-700">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Player</th>
-                  <th className="px-4 py-3 font-medium">Round wins</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 bg-white text-zinc-800">
-                {summary.participants
-                  .slice()
-                  .sort((a, b) => {
-                    if (b.roundWins !== a.roundWins) {
-                      return b.roundWins - a.roundWins;
-                    }
-
-                    return a.playerDisplayName.localeCompare(b.playerDisplayName);
-                  })
-                  .map((participant) => (
-                    <tr key={participant.sessionParticipantId}>
-                      <td className="px-4 py-3">
-                        <Link className="underline" href={`/dashboard/players/${participant.playerId}`}>
-                          {participant.playerDisplayName}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">{participant.roundWins}</td>
+          <h3 className="app-section-title text-base">Session summary</h3>
+          {summary.participants.length > 0 ? (
+            <div className="mt-3">
+              <DataTable>
+                <table className="app-table min-w-full">
+                  <thead>
+                    <tr>
+                      <th>Player</th>
+                      <th>Round wins</th>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
+                  </thead>
+                  <tbody>
+                    {summary.participants
+                      .slice()
+                      .sort((a, b) => {
+                        if (b.roundWins !== a.roundWins) {
+                          return b.roundWins - a.roundWins;
+                        }
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Notes</h2>
-        <p className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-          {gameSession.notes ?? "No notes"}
-        </p>
-      </section>
+                        return a.playerDisplayName.localeCompare(b.playerDisplayName);
+                      })
+                      .map((participant) => (
+                        <tr key={participant.sessionParticipantId}>
+                          <td>
+                            <Link className="underline" href={`/dashboard/players/${participant.playerId}`}>
+                              {participant.playerDisplayName}
+                            </Link>
+                          </td>
+                          <td>{participant.roundWins}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </DataTable>
+            </div>
+          ) : (
+            <EmptyState title="No participants" description="Add participants to start tracking round wins." />
+          )}
+        </SectionCard>
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Participants</h2>
-        {gameSession.participants.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600">No participants are currently assigned to this session.</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-            {gameSession.participants.map((participant) => (
-              <li key={participant.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <Link className="font-medium text-zinc-900 underline" href={`/dashboard/players/${participant.player.id}`}>
-                  {participant.player.displayName}
-                </Link>
-                <span className="text-zinc-600">{participant.player.isActive ? "Active" : "Inactive"}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <div className="space-y-6">
+          <SectionCard title="Trusted Admins">
+            {gameSession.trustedAdmins.length === 0 ? (
+              <EmptyState title="No trusted admins" description="Only owner-level permissions are active for this session." />
+            ) : (
+              <ul className="space-y-2">
+                {gameSession.trustedAdmins.map((trustedAdmin) => (
+                  <li key={trustedAdmin.id} className="app-card-muted px-3 py-2 text-sm text-[var(--text-secondary)]">
+                    {trustedAdmin.user.name}
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">({trustedAdmin.user.email})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
 
-      <section data-testid="session-rounds-section">
-        <h2 className="text-lg font-semibold text-zinc-900">Rounds</h2>
+          <SectionCard title="Notes">
+            <p className="app-card-muted px-4 py-3 text-sm text-[var(--text-secondary)]">{gameSession.notes ?? "No notes"}</p>
+          </SectionCard>
+
+          <SectionCard title="Participants">
+            {gameSession.participants.length === 0 ? (
+              <EmptyState title="No participants" description="No participants are currently assigned to this session." />
+            ) : (
+              <ul className="space-y-2">
+                {gameSession.participants.map((participant) => (
+                  <li key={participant.id} className="app-card-muted flex items-center justify-between px-3 py-2 text-sm">
+                    <Link className="font-medium text-[var(--text-primary)] underline" href={`/dashboard/players/${participant.player.id}`}>
+                      {participant.player.displayName}
+                    </Link>
+                    <StatusBadge tone={participant.player.isActive ? "success" : "warning"}>
+                      {participant.player.isActive ? "Active" : "Inactive"}
+                    </StatusBadge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+        </div>
+      </div>
+
+      <SectionCard title="Rounds" className="space-y-3" data-testid="session-rounds-section">
         {rounds.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600">No rounds have been recorded for this session yet.</p>
+          <EmptyState title="No rounds yet" description="No rounds have been recorded for this session yet." />
         ) : (
-          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+          <ul className="space-y-2">
             {rounds.map((round) => (
-              <li key={round.id} className="space-y-2 px-4 py-3 text-sm">
+              <li key={round.id} className="app-card-muted space-y-2 px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2 text-zinc-800">
-                    <span className="font-medium">Round #{round.sequenceNumber}</span>
-                    <span className="text-zinc-500">{round.placements.length} placements</span>
+                  <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+                    <span className="font-medium text-[var(--text-primary)]">Round #{round.sequenceNumber}</span>
+                    <StatusBadge>{round.placements.length} placements</StatusBadge>
                   </div>
 
                   {canManageSession ? (
-                    <div className="flex items-center gap-3">
-                      <Link className="underline" href={`/dashboard/sessions/${gameSession.id}/rounds/${round.id}/edit`}>
+                    <div className="flex items-center gap-2">
+                      <Link className="app-button app-button-ghost" href={`/dashboard/sessions/${gameSession.id}/rounds/${round.id}/edit`}>
                         Edit
                       </Link>
                       <form action={deleteRoundAction.bind(null, gameSession.id, round.id, gameSession.groupId)}>
-                        <button type="submit" className="underline">
+                        <button type="submit" className="app-button app-button-destructive">
                           Delete
                         </button>
                       </form>
@@ -228,7 +249,7 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
                   ) : null}
                 </div>
 
-                <ol className="list-decimal space-y-1 pl-5 text-zinc-700">
+                <ol className="list-decimal space-y-1 pl-5 text-[var(--text-secondary)]">
                   {round.placements.map((placement) => (
                     <li key={placement.id}>
                       <Link className="underline" href={`/dashboard/players/${placement.sessionParticipant.player.id}`}>
@@ -238,12 +259,12 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
                   ))}
                 </ol>
 
-                {round.notes ? <p className="text-zinc-600">{round.notes}</p> : null}
+                {round.notes ? <p className="text-[var(--text-muted)]">{round.notes}</p> : null}
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </SectionCard>
     </section>
   );
 }

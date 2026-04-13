@@ -15,8 +15,8 @@ export function PlayerHand({ cards, renderCard, sourceLabel = "Your cards" }: Pl
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4">
-      <p className="text-xs uppercase tracking-wide text-zinc-500">{sourceLabel}</p>
+    <div className="app-card-muted min-w-0 rounded-xl p-4">
+      <p className="app-caption uppercase tracking-wide">{sourceLabel}</p>
       <div className="mt-4 flex max-w-full snap-x items-end gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 pt-4 [scrollbar-width:thin]">
         {cards.length > 0 ? (
           cards.map((card, index) => {
@@ -46,7 +46,7 @@ export function PlayerHand({ cards, renderCard, sourceLabel = "Your cards" }: Pl
             );
           })
         ) : (
-          <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">No playable cards in hand.</p>
+          <p className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-muted)]">No playable cards in hand.</p>
         )}
       </div>
     </div>

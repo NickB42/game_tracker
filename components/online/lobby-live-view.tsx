@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { LobbySnapshot } from "@/components/online/types";
+import { useToast } from "@/components/ui/toast";
 
 const OnlineGameTable = dynamic(
   () => import("@/components/online/table/online-game-table").then((mod) => mod.OnlineGameTable),
@@ -35,10 +36,12 @@ export function LobbyLiveView({
   closeLobbyAction,
   exportGameAction,
 }: LobbyLiveViewProps) {
+  const { pushToast } = useToast();
   const [snapshot, setSnapshot] = useState<LobbySnapshot>(initialSnapshot);
   const [error, setError] = useState<string | null>(null);
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +83,15 @@ export function LobbyLiveView({
       clearInterval(poll);
     };
   }, [lobbyId]);
+
+  useEffect(() => {
+    if (!error || error === lastErrorRef.current) {
+      return;
+    }
+
+    lastErrorRef.current = error;
+    pushToast({ title: "Online action failed", description: error, tone: "error" });
+  }, [error, pushToast]);
 
   async function submitMove(move: { type: "play"; cardIds: string[] } | { type: "pickup" } | { type: "blind_play" }) {
     setIsSubmittingMove(true);

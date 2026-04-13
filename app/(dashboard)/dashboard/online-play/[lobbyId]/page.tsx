@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
@@ -12,6 +11,8 @@ import {
 } from "@/actions/online";
 import { LobbyLiveView } from "@/components/online/lobby-live-view";
 import { LobbyPageRevalidator } from "@/components/online/lobby-page-revalidator";
+import type { LobbySnapshot } from "@/components/online/types";
+import { AppButton, PageHeader, SectionCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getOnlineLobbySnapshot } from "@/lib/db/online";
 
@@ -23,7 +24,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
   const user = await requireAuthenticatedUser();
   const { lobbyId } = await params;
 
-  let snapshot;
+  let snapshot: LobbySnapshot;
 
   try {
     snapshot = await getOnlineLobbySnapshot(lobbyId, user.id);
@@ -61,37 +62,46 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
     <section className="space-y-6" data-testid="online-lobby-page">
       <LobbyPageRevalidator enabled={shouldLiveRefresh} />
 
-      <Link href="/dashboard/online-play" className="text-sm text-zinc-700 underline">
-        Back to online lobbies
-      </Link>
+      <PageHeader
+        title={`Lobby ${snapshot.lobby.code}`}
+        description="Live room state, swap setup, and game table controls."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge tone={snapshot.lobby.status === "IN_PROGRESS" ? "accent" : "neutral"}>{snapshot.lobby.status}</StatusBadge>
+            <AppButton variant="secondary" href="/dashboard/online-play">
+              Back to online lobbies
+            </AppButton>
+          </div>
+        }
+      />
 
       {snapshot.game?.publicState?.phase === "swap" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-sm text-zinc-600">
+        <SectionCard title="Swap setup" description="Each player must lock exactly 3 face-up cards before active turns can begin.">
+          <p className="text-sm text-[var(--text-muted)]">
             Swap lock progress: {swapLockedUserIds.length}/{snapshot.players.length} players locked their face-up selection.
           </p>
           {isOwner && !allPlayersLockedSwap ? (
-            <p className="mt-2 text-xs text-amber-700">Every player must save their 3 face-up cards before turns can begin.</p>
+            <p className="mt-2 text-xs text-[var(--warning)]">Every player must save their 3 face-up cards before turns can begin.</p>
           ) : null}
 
-          <form action={submitSwapFormAction} className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-sm font-medium text-zinc-800">Choose your 3 face-up cards</p>
-            <p className="mt-1 text-xs text-zinc-600">
+          <form action={submitSwapFormAction} className="app-card-muted mt-4 rounded-lg p-3">
+            <p className="text-sm font-medium text-[var(--text-secondary)]">Choose your 3 face-up cards</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               You can see 6 cards here. Select exactly 3 to place face-up. The remaining 3 become your hand.
             </p>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {myVisibleCards.map((card) => (
-                <label key={card.id} className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm">
+                <label key={card.id} className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
                   <input
                     type="checkbox"
                     name="faceUpCardIds"
                     value={card.id}
                     defaultChecked={myFaceUp.some((existing) => existing.id === card.id)}
-                    className="size-4 rounded border-zinc-300"
+                    className="size-4 rounded border-[var(--border)]"
                   />
-                  <span className="font-medium text-zinc-800">{card.rank}{card.suit}</span>
-                  <span className="text-xs text-zinc-500">({card.id})</span>
+                  <span className="font-medium text-[var(--text-secondary)]">{card.rank}{card.suit}</span>
+                  <span className="text-xs text-[var(--text-muted)]">({card.id})</span>
                   <input type="hidden" name="visibleCardIds" value={card.id} />
                 </label>
               ))}
@@ -99,12 +109,12 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
 
             <button
               type="submit"
-              className="mt-3 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-white"
+              className="app-button app-button-primary mt-3"
             >
               Save face-up selection
             </button>
           </form>
-        </div>
+        </SectionCard>
       ) : null}
 
       <LobbyLiveView

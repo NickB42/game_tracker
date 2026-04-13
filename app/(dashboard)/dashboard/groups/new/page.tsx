@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { GroupForm } from "@/components/groups/group-form";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateGroup } from "@/lib/domain/authorization";
 import { getPlayers } from "@/lib/db/players";
@@ -17,16 +18,16 @@ export default async function NewGroupPage() {
   const [players, users] = await Promise.all([getPlayers({ includeInactive: true }), getAssignableUsers(user)]);
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Create group</h1>
-          <p className="mt-1 text-sm text-zinc-600">Create a group and optionally assign existing players as members.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/groups">
-          Back to groups
-        </Link>
-      </div>
+    <section className="space-y-6">
+      <PageHeader
+        title="Create group"
+        description="Create a group and optionally assign existing players as members."
+        actions={
+          <Link className="app-button app-button-secondary" href="/dashboard/groups">
+            Back to groups
+          </Link>
+        }
+      />
 
       <GroupForm
         mode="create"

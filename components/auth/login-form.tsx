@@ -56,7 +56,7 @@ export function LoginForm() {
   return (
     <form action={handleSubmit} className="mt-6 space-y-4" data-testid="login-form">
       <div>
-        <label htmlFor="email" className="mb-1 block text-sm font-medium text-zinc-700">
+        <label htmlFor="email" className="app-field-label mb-1 block">
           Email
         </label>
         <input
@@ -65,15 +65,15 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           data-testid="login-email-input"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-input"
           placeholder="admin@example.com"
           required
         />
-        {errors.email ? <p className="mt-1 text-sm text-red-600">{errors.email}</p> : null}
+        {errors.email ? <p className="mt-1 text-xs text-[var(--danger)]">{errors.email}</p> : null}
       </div>
 
       <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium text-zinc-700">
+        <label htmlFor="password" className="app-field-label mb-1 block">
           Password
         </label>
         <input
@@ -82,15 +82,15 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           data-testid="login-password-input"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-input"
           placeholder="********"
           required
         />
-        {errors.password ? <p className="mt-1 text-sm text-red-600">{errors.password}</p> : null}
+        {errors.password ? <p className="mt-1 text-xs text-[var(--danger)]">{errors.password}</p> : null}
       </div>
 
       {errors.form ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">
           {errors.form}
         </div>
       ) : null}
@@ -99,7 +99,7 @@ export function LoginForm() {
         type="submit"
         disabled={isPending}
         data-testid="login-submit-button"
-        className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="app-button app-button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Signing in..." : "Sign in"}
       </button>

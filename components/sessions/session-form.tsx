@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { createGameSessionAction, type SessionFormState, updateGameSessionAction } from "@/actions/sessions";
+import { Field, FormSection } from "@/components/ui/form-primitives";
 
 type SelectablePlayer = {
   id: string;
@@ -80,16 +81,13 @@ export function SessionForm(props: SessionFormProps) {
   const playedAtDefault = defaults?.playedAt ? toDateTimeLocalInputValue(defaults.playedAt) : toDateTimeLocalInputValue(new Date().toISOString());
 
   return (
-    <form action={formAction} className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div>
-        <label htmlFor="groupId" className="mb-1 block text-sm font-medium text-zinc-700">
-          Group
-        </label>
+    <form action={formAction} className="app-card space-y-5 p-6">
+      <Field id="groupId" label="Group" error={state.fieldErrors?.groupId}>
         <select
           id="groupId"
           name="groupId"
           defaultValue={defaults?.groupId ?? ""}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-select"
         >
           <option value="">No group</option>
           {props.selectableGroups.map((group) => (
@@ -98,13 +96,9 @@ export function SessionForm(props: SessionFormProps) {
             </option>
           ))}
         </select>
-        {state.fieldErrors?.groupId ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.groupId}</p> : null}
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="title" className="mb-1 block text-sm font-medium text-zinc-700">
-          Title
-        </label>
+      <Field id="title" label="Title" error={state.fieldErrors?.title}>
         <input
           id="title"
           name="title"
@@ -112,88 +106,74 @@ export function SessionForm(props: SessionFormProps) {
           maxLength={120}
           defaultValue={defaults?.title ?? ""}
           data-testid="session-title-input"
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-input"
           placeholder="Optional title"
         />
-        {state.fieldErrors?.title ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.title}</p> : null}
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="playedAt" className="mb-1 block text-sm font-medium text-zinc-700">
-          Played at
-        </label>
+      <Field id="playedAt" label="Played at" error={state.fieldErrors?.playedAt}>
         <input
           id="playedAt"
           name="playedAt"
           type="datetime-local"
           defaultValue={playedAtDefault}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-input"
           required
         />
-        {state.fieldErrors?.playedAt ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.playedAt}</p> : null}
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="notes" className="mb-1 block text-sm font-medium text-zinc-700">
-          Notes
-        </label>
+      <Field id="notes" label="Notes" error={state.fieldErrors?.notes}>
         <textarea
           id="notes"
           name="notes"
           maxLength={1000}
           defaultValue={defaults?.notes ?? ""}
           rows={4}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-textarea"
           placeholder="Optional notes"
         />
-        {state.fieldErrors?.notes ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.notes}</p> : null}
-      </div>
+      </Field>
 
-      <section>
-        <h2 className="text-sm font-medium text-zinc-900">Trusted session admins</h2>
-        <p className="mt-1 text-sm text-zinc-600">
-          Trusted session admins can edit this session and rounds. Group trusted admins are auto-included when a group is selected.
-        </p>
-
-        <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+      <FormSection
+        title="Trusted session admins"
+        description="Trusted session admins can edit this session and rounds. Group trusted admins are auto-included when a group is selected."
+      >
+        <div className="max-h-48 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectableUsers.length === 0 ? (
-            <p className="text-sm text-zinc-600">No users available yet.</p>
+            <p className="text-sm text-[var(--text-muted)]">No users available yet.</p>
           ) : (
             props.selectableUsers.map((user) => (
-              <label key={user.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
-                <span className="text-sm text-zinc-800">
+              <label key={user.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-xs)] px-2 py-1 hover:bg-[var(--surface-muted)]">
+                <span className="text-sm text-[var(--text-secondary)]">
                   {user.name}
-                  {user.email ? <span className="ml-2 text-xs text-zinc-500">({user.email})</span> : null}
+                  {user.email ? <span className="ml-2 text-xs text-[var(--text-muted)]">({user.email})</span> : null}
                 </span>
                 <input
                   type="checkbox"
                   name="trustedAdminUserIds"
                   value={user.id}
                   defaultChecked={selectedTrustedAdminUserIds.has(user.id)}
-                  className="size-4 rounded border-zinc-300"
+                  className="size-4 rounded border-[var(--border)]"
                 />
               </label>
             ))
           )}
         </div>
         {state.fieldErrors?.trustedAdminUserIds ? (
-          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.trustedAdminUserIds}</p>
+          <p className="mt-1 text-xs text-[var(--danger)]">{state.fieldErrors.trustedAdminUserIds}</p>
         ) : null}
-      </section>
+      </FormSection>
 
-      <section>
-        <h2 className="text-sm font-medium text-zinc-900">Participants</h2>
-        <p className="mt-1 text-sm text-zinc-600">Select the players who actually attended this session. Minimum 2.</p>
-
-        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+      <FormSection title="Participants" description="Select the players who actually attended this session. Minimum 2.">
+        <div className="max-h-72 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectablePlayers.length === 0 ? (
-            <p className="text-sm text-zinc-600">No players available yet.</p>
+            <p className="text-sm text-[var(--text-muted)]">No players available yet.</p>
           ) : (
             props.selectablePlayers.map((player) => (
-              <label key={player.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
-                <span className="text-sm text-zinc-800">
+              <label key={player.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-xs)] px-2 py-1 hover:bg-[var(--surface-muted)]">
+                <span className="text-sm text-[var(--text-secondary)]">
                   {player.displayName}
-                  {!player.isActive ? <span className="ml-2 text-xs text-zinc-500">(inactive)</span> : null}
+                  {!player.isActive ? <span className="ml-2 text-xs text-[var(--text-muted)]">(inactive)</span> : null}
                 </span>
                 <input
                   type="checkbox"
@@ -201,26 +181,26 @@ export function SessionForm(props: SessionFormProps) {
                   value={player.id}
                   defaultChecked={selectedParticipantIds.has(player.id)}
                   aria-label={player.displayName}
-                  className="size-4 rounded border-zinc-300"
+                  className="size-4 rounded border-[var(--border)]"
                 />
               </label>
             ))
           )}
         </div>
         {state.fieldErrors?.participantIds ? (
-          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.participantIds}</p>
+          <p className="mt-1 text-xs text-[var(--danger)]">{state.fieldErrors.participantIds}</p>
         ) : null}
-      </section>
+      </FormSection>
 
       {state.message ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{state.message}</div>
+        <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">{state.message}</div>
       ) : null}
 
       <button
         type="submit"
         disabled={isPending}
         data-testid="session-submit-button"
-        className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Saving..." : props.mode === "edit" ? "Save changes" : "Create session"}
       </button>

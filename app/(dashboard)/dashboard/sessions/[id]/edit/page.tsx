@@ -2,12 +2,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SessionForm } from "@/components/sessions/session-form";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
 import { getPlayers } from "@/lib/db/players";
 import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 import { getAssignableUsers } from "@/lib/db/users";
+
+type SessionEditView = {
+  id: string;
+  groupId: string | null;
+  title: string | null;
+  playedAt: Date;
+  notes: string | null;
+  participants: Array<{ playerId: string }>;
+  trustedAdmins: Array<{ userId: string }>;
+};
 
 type EditGameSessionPageProps = {
   params: Promise<{
@@ -19,7 +30,7 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
   const user = await requireAuthenticatedUser();
   const { id } = await params;
 
-  const [gameSession, sessionContext, groups, players, users] = await Promise.all([
+  const [gameSessionRaw, sessionContext, groups, players, users] = await Promise.all([
     getGameSessionById(id, user),
     getGameSessionAuthorizationContext(id, user),
     getGroups(user),
@@ -27,21 +38,23 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
     getAssignableUsers(user),
   ]);
 
-  if (!gameSession || !sessionContext || !canEditSession(user, sessionContext)) {
+  if (!gameSessionRaw || !sessionContext || !canEditSession(user, sessionContext)) {
     notFound();
   }
 
+  const gameSession = gameSessionRaw as unknown as SessionEditView;
+
   return (
     <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Edit game session</h1>
-          <p className="mt-1 text-sm text-zinc-600">Update session details and synchronize attendance.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/sessions/${gameSession.id}`}>
-          Back to session
-        </Link>
-      </div>
+      <PageHeader
+        title="Edit Game Session"
+        description="Update session details and synchronize attendance."
+        actions={
+          <Link className="app-button app-button-ghost" href={`/dashboard/sessions/${gameSession.id}`}>
+            Back to session
+          </Link>
+        }
+      />
 
       <SessionForm
         mode="edit"

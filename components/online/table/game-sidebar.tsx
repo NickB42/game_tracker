@@ -5,6 +5,7 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import type { LobbySnapshot } from "@/components/online/types";
 import { summarizeLobbyEvent, toneClasses } from "@/components/online/table/polish-state";
+import { StatusBadge } from "@/components/ui/primitives";
 
 type PublicState = NonNullable<NonNullable<LobbySnapshot["game"]>["publicState"]>;
 
@@ -113,10 +114,10 @@ export function GameSidebar({
 
   return (
     <aside className="min-w-0 space-y-3">
-      <div className="rounded-xl border border-zinc-200 bg-white p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">Lobby</p>
-        <p className="mt-1 text-lg font-semibold text-zinc-900">{snapshot.lobby.code}</p>
-        <p className="text-xs text-zinc-500">Use these lobby actions.</p>
+      <div className="app-card-muted rounded-xl p-3">
+        <p className="app-caption uppercase tracking-wide">Lobby</p>
+        <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{snapshot.lobby.code}</p>
+        <p className="text-xs text-[var(--text-muted)]">Use these lobby actions.</p>
 
         <div className="mt-3 grid gap-2">
           {me ? (
@@ -124,10 +125,10 @@ export function GameSidebar({
               <button
                 type="submit"
                 className={[
-                  "w-full rounded-lg border px-3 py-2 text-sm font-medium transition active:scale-[0.98]",
+                  "w-full app-button active:scale-[0.98]",
                   me.readyState
-                    ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
-                    : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
+                    ? "app-button-destructive"
+                    : "app-button-primary",
                 ].join(" ")}
               >
                 {me.readyState ? "Mark not ready" : "Mark ready"}
@@ -138,7 +139,7 @@ export function GameSidebar({
           <form action={leaveLobbyAction}>
             <button
               type="submit"
-              className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 active:scale-[0.98]"
+              className="w-full app-button app-button-secondary active:scale-[0.98]"
             >
               Leave lobby
             </button>
@@ -149,7 +150,7 @@ export function GameSidebar({
               <button
                 type="submit"
                 disabled={!allActivePlayersReady}
-                className="w-full rounded-lg bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                className="w-full app-button app-button-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {snapshot.lobby.status === "FINISHED" ? "Start next round" : "Start game"}
               </button>
@@ -161,7 +162,7 @@ export function GameSidebar({
               <button
                 type="submit"
                 disabled={!allPlayersLockedSwap}
-                className="w-full rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900 transition hover:bg-sky-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                className="w-full app-button app-button-secondary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Begin turns
               </button>
@@ -172,7 +173,7 @@ export function GameSidebar({
             <form action={closeLobbyAction}>
               <button
                 type="submit"
-                className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100 active:scale-[0.98]"
+                className="w-full app-button app-button-destructive active:scale-[0.98]"
               >
                 Close lobby
               </button>
@@ -183,7 +184,7 @@ export function GameSidebar({
             <form action={exportGameAction}>
               <button
                 type="submit"
-                className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 active:scale-[0.98]"
+                className="w-full app-button app-button-primary active:scale-[0.98]"
               >
                 Export to tracker
               </button>
@@ -192,53 +193,53 @@ export function GameSidebar({
         </div>
 
         {canStartRound && !allActivePlayersReady ? (
-          <p className="mt-2 text-xs text-amber-700">All players must be ready before starting a round.</p>
+          <p className="mt-2 text-xs text-[var(--warning)]">All players must be ready before starting a round.</p>
         ) : null}
 
         {canBeginTurns && !allPlayersLockedSwap ? (
-          <p className="mt-2 text-xs text-amber-700">Every player must save 3 face-up cards before turns can begin.</p>
+          <p className="mt-2 text-xs text-[var(--warning)]">Every player must save 3 face-up cards before turns can begin.</p>
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">Connection</p>
-        <p className={isRefreshing ? "mt-1 text-sm text-amber-700" : "mt-1 text-sm text-emerald-700"}>
+      <div className="app-card-muted rounded-xl p-3">
+        <p className="app-caption uppercase tracking-wide">Connection</p>
+        <p className={isRefreshing ? "mt-1 text-sm text-[var(--warning)]" : "mt-1 text-sm text-[var(--success)]"}>
           {isRefreshing ? "Refreshing..." : "Live updates active"}
         </p>
-        {isSubmittingMove ? <p className="text-sm text-zinc-600">Submitting move...</p> : null}
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {isSubmittingMove ? <p className="text-sm text-[var(--text-muted)]">Submitting move...</p> : null}
+        {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">Lobby leaderboard</p>
-        <p className="mt-1 text-sm text-zinc-700">Rounds played: {snapshot.lobbyRoundsPlayed}</p>
-        <p className="text-sm text-zinc-700">
+      <div className="app-card-muted rounded-xl p-3">
+        <p className="app-caption uppercase tracking-wide">Lobby leaderboard</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">Rounds played: {snapshot.lobbyRoundsPlayed}</p>
+        <p className="text-sm text-[var(--text-secondary)]">
           Last winner: {snapshot.lobbyLastWinner ? snapshot.lobbyLastWinner.name : "-"}
         </p>
 
         {snapshot.lobbyLeaderboard.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No finished rounds yet.</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">No finished rounds yet.</p>
         ) : (
           <ol className="mt-2 space-y-2">
             {snapshot.lobbyLeaderboard.map((entry, index) => (
-              <li key={entry.userId} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-2 py-1">
+              <li key={entry.userId} className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1">
                 <div>
-                  <p className="text-sm font-medium text-zinc-800">
+                  <p className="text-sm font-medium text-[var(--text-secondary)]">
                     {index + 1}. {entry.name}
                   </p>
-                  <p className="text-xs text-zinc-500">Win rate: {entry.winRate.toFixed(1)}%</p>
+                  <p className="text-xs text-[var(--text-muted)]">Win rate: {entry.winRate.toFixed(1)}%</p>
                 </div>
-                <p className="text-xs font-semibold text-zinc-600">{entry.wins} wins</p>
+                <StatusBadge tone="accent">{entry.wins} wins</StatusBadge>
               </li>
             ))}
           </ol>
         )}
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">Recent highlights</p>
+      <div className="app-card-muted rounded-xl p-3">
+        <p className="app-caption uppercase tracking-wide">Recent highlights</p>
         {highlights.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No events yet.</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">No events yet.</p>
         ) : (
           <ul className="mt-2 space-y-2">
             <AnimatePresence initial={false}>
@@ -265,20 +266,20 @@ export function GameSidebar({
         )}
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">Lobby chat</p>
-        <p className="mt-1 text-[11px] text-zinc-500">Temporary chat for this lobby session.</p>
+      <div className="app-card-muted rounded-xl p-3">
+        <p className="app-caption uppercase tracking-wide">Lobby chat</p>
+        <p className="mt-1 text-[11px] text-[var(--text-muted)]">Temporary chat for this lobby session.</p>
 
-        <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+        <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
           {chatMessages.length > 0 ? (
             chatMessages.map((message) => (
-              <div key={message.id} className="rounded-md bg-white px-2 py-1">
-                <p className="text-[11px] font-semibold text-zinc-700">{message.sender}</p>
-                <p className="text-xs text-zinc-800">{message.text}</p>
+              <div key={message.id} className="rounded-md bg-[var(--surface-muted)] px-2 py-1">
+                <p className="text-[11px] font-semibold text-[var(--text-secondary)]">{message.sender}</p>
+                <p className="text-xs text-[var(--text-primary)]">{message.text}</p>
               </div>
             ))
           ) : (
-            <p className="text-xs text-zinc-500">No chat messages yet.</p>
+            <p className="text-xs text-[var(--text-muted)]">No chat messages yet.</p>
           )}
         </div>
 
@@ -289,18 +290,18 @@ export function GameSidebar({
             onChange={(entry) => setChatDraft(entry.target.value)}
             maxLength={240}
             placeholder="Write a message"
-            className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm text-zinc-800 outline-none ring-emerald-300 placeholder:text-zinc-400 focus:ring-2"
+            className="app-input min-w-0 flex-1"
           />
           <button
             type="submit"
             disabled={isSendingChat || chatDraft.trim().length === 0}
-            className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-50"
           >
             Send
           </button>
         </form>
 
-        {chatError ? <p className="mt-1 text-xs text-red-600">{chatError}</p> : null}
+        {chatError ? <p className="mt-1 text-xs text-[var(--danger)]">{chatError}</p> : null}
       </div>
     </aside>
   );

@@ -505,7 +505,7 @@ export function OnlineGameTable({
       onDragEnd={(event) => void onDragEnd(event)}
     >
       <div className="grid min-w-0 gap-4 lg:grid-cols-[1fr_320px]">
-        <section className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 bg-[radial-gradient(circle_at_top,#ecfeff,#f8fafc_45%,#ffffff)] p-4 shadow-sm">
+        <section className="app-card min-w-0 space-y-4 rounded-2xl bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--accent-soft)_65%,transparent),var(--surface-muted)_44%,var(--surface))] p-4">
           <TurnBanner
             currentPlayerName={currentPlayer?.name ?? null}
             isMyTurn={isMyTurn}
@@ -554,12 +554,12 @@ export function OnlineGameTable({
                 className={[
                   "rounded-md border px-2 py-1 text-xs font-semibold",
                   specialEffectBadge.tone === "emerald"
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    ? "border-[color:color-mix(in_srgb,var(--success)_42%,var(--border))] bg-[color:color-mix(in_srgb,var(--success)_16%,transparent)] text-[var(--success)]"
                     : specialEffectBadge.tone === "amber"
-                      ? "border-amber-300 bg-amber-50 text-amber-900"
+                      ? "border-[color:color-mix(in_srgb,var(--warning)_42%,var(--border))] bg-[color:color-mix(in_srgb,var(--warning)_14%,transparent)] text-[var(--warning)]"
                       : specialEffectBadge.tone === "sky"
-                        ? "border-sky-300 bg-sky-50 text-sky-900"
-                        : "border-zinc-300 bg-zinc-100 text-zinc-800",
+                        ? "border-[color:color-mix(in_srgb,var(--accent)_42%,var(--border))] bg-[var(--accent-soft)] text-[color:color-mix(in_srgb,var(--accent)_88%,white_12%)]"
+                        : "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
                 ].join(" ")}
               >
                 {specialEffectBadge.label}
@@ -570,7 +570,7 @@ export function OnlineGameTable({
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900"
+                className="rounded-md border border-[color:color-mix(in_srgb,var(--success)_42%,var(--border))] bg-[color:color-mix(in_srgb,var(--success)_16%,transparent)] px-2 py-1 text-xs font-semibold text-[var(--success)]"
               >
                 Pile burned, same player continues
               </motion.span>
@@ -724,12 +724,12 @@ export function OnlineGameTable({
               }
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.98 }}
               transition={{ type: "spring", stiffness: 220, damping: 20 }}
-              className="w-full max-w-lg rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,#ecfdf5_0%,#dcfce7_50%,#f8fafc_100%)] px-5 py-4 shadow-2xl"
+                className="w-full max-w-lg rounded-2xl border border-[color:color-mix(in_srgb,var(--success)_42%,var(--border))] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--success)_18%,var(--surface))_0%,var(--surface)_58%,var(--surface-muted)_100%)] px-5 py-4 shadow-2xl"
             >
-              <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Round Winner</p>
-              <p className="mt-2 text-center text-2xl font-black text-emerald-900">{roundFinishSummary.winnerName}</p>
-              <p className="mt-1 text-center text-sm text-zinc-700">
-                Safe this round. <span className="font-semibold text-red-700">{roundFinishSummary.loserName}</span> is Shithead.
+                <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--success)]">Round Winner</p>
+                <p className="mt-2 text-center text-2xl font-black text-[var(--text-primary)]">{roundFinishSummary.winnerName}</p>
+                <p className="mt-1 text-center text-sm text-[var(--text-secondary)]">
+                  Safe this round. <span className="font-semibold text-[var(--danger)]">{roundFinishSummary.loserName}</span> is Shithead.
               </p>
             </motion.div>
           </motion.div>

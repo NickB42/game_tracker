@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGroupLeaderboard } from "@/lib/db/leaderboards";
 import { getGroupById } from "@/lib/db/groups";
@@ -30,23 +31,21 @@ export default async function GroupLeaderboardPage({ params }: GroupLeaderboardP
   }
 
   return (
-    <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Group leaderboard: {group.name}</h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            Ratings and derived wins computed only from sessions historically linked to this group.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/leaderboards">
-            Back to leaderboards
-          </Link>
-          <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/groups/${group.id}`}>
-            Open group
-          </Link>
-        </div>
-      </header>
+    <section className="space-y-6">
+      <PageHeader
+        title={`Group leaderboard: ${group.name}`}
+        description="Ratings and derived wins computed only from sessions historically linked to this group."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link className="app-button app-button-secondary" href="/dashboard/leaderboards">
+              Back to leaderboards
+            </Link>
+            <Link className="app-button app-button-ghost" href={`/dashboard/groups/${group.id}`}>
+              Open group
+            </Link>
+          </div>
+        }
+      />
 
       <LeaderboardTable rows={rows} />
     </section>

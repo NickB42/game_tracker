@@ -15,16 +15,17 @@ export default async function LoginPage() {
   }
 
   return (
-    <section className="w-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-semibold text-zinc-900">Login</h1>
-      <p className="mt-2 text-sm text-zinc-600">
+    <section className="app-card w-full p-8">
+      <p className="app-caption uppercase tracking-[0.12em]">Secure Access</p>
+      <h1 className="mt-2 app-page-title text-3xl">Login</h1>
+      <p className="mt-2 text-sm text-[var(--text-muted)]">
         Sign in with the credentials provided by your admin.
       </p>
 
       <LoginForm />
 
       <div className="mt-6">
-        <Link className="text-sm font-medium text-zinc-900 underline" href="/">
+        <Link className="app-button app-button-ghost px-0" href="/">
           Back to home
         </Link>
       </div>

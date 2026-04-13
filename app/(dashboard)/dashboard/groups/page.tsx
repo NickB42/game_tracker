@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AppButton, DataTable, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateGroup, canEditGroup } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
@@ -9,44 +10,39 @@ export default async function GroupsPage() {
   const groups = await getGroups(user);
 
   return (
-    <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Groups</h1>
-          <p className="mt-1 text-sm text-zinc-600">Named collections of players with explicit memberships.</p>
-        </div>
-        {canCreateGroup(user) ? (
-          <Link
-            href="/dashboard/groups/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-          >
-            New group
-          </Link>
-        ) : null}
-      </header>
+    <section className="space-y-6">
+      <PageHeader
+        title="Groups"
+        description="Named collections of players with explicit memberships and trusted admin controls."
+        actions={canCreateGroup(user) ? <AppButton href="/dashboard/groups/new">New group</AppButton> : <StatusBadge>Read only</StatusBadge>}
+      />
 
       {groups.length === 0 ? (
-        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">No groups created yet.</p>
+        <EmptyState
+          title="No groups yet"
+          description="Create a group to organize memberships, run sessions, and unlock group leaderboards."
+          action={canCreateGroup(user) ? <AppButton href="/dashboard/groups/new">Create group</AppButton> : null}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200">
-          <table className="min-w-full divide-y divide-zinc-200 text-sm">
-            <thead className="bg-zinc-50 text-left text-zinc-700">
+        <DataTable>
+          <table className="app-table min-w-full">
+            <thead>
               <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Members</th>
-                <th className="px-4 py-3 font-medium">Game sessions</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th>Name</th>
+                <th>Members</th>
+                <th>Sessions</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 bg-white text-zinc-800">
+            <tbody>
               {groups.map((group) => (
                 <tr key={group.id}>
-                  <td className="px-4 py-3 font-medium">{group.name}</td>
-                  <td className="px-4 py-3">{group._count.memberships}</td>
-                  <td className="px-4 py-3">{group._count.gameSessions}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-3">
-                      <Link className="text-zinc-900 underline" href={`/dashboard/groups/${group.id}`}>
+                  <td className="font-medium text-[var(--text-primary)]">{group.name}</td>
+                  <td>{group._count.memberships}</td>
+                  <td>{group._count.gameSessions}</td>
+                  <td>
+                    <div className="flex flex-wrap gap-2">
+                      <Link className="app-button app-button-ghost" href={`/dashboard/groups/${group.id}`}>
                         View
                       </Link>
                       {canEditGroup(user, {
@@ -54,7 +50,7 @@ export default async function GroupsPage() {
                         isTrustedAdmin: group.trustedAdmins.length > 0,
                         isMember: false,
                       }) ? (
-                        <Link className="text-zinc-900 underline" href={`/dashboard/groups/${group.id}/edit`}>
+                        <Link className="app-button app-button-secondary" href={`/dashboard/groups/${group.id}/edit`}>
                           Edit
                         </Link>
                       ) : null}
@@ -64,7 +60,7 @@ export default async function GroupsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </DataTable>
       )}
     </section>
   );
