@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PlayerForm } from "@/components/players/player-form";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAdminUser } from "@/lib/auth/guards";
 import { getPlayerById } from "@/lib/db/players";
 
@@ -21,16 +22,16 @@ export default async function EditPlayerPage({ params }: EditPlayerPageProps) {
   }
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Edit player</h1>
-          <p className="mt-1 text-sm text-zinc-600">Update display info for this global player.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/players/${player.id}`}>
-          Back to player
-        </Link>
-      </div>
+    <section className="space-y-6">
+      <PageHeader
+        title="Edit player"
+        description="Update display info for this global player."
+        actions={
+          <Link className="app-button app-button-secondary" href={`/dashboard/players/${player.id}`}>
+            Back to player
+          </Link>
+        }
+      />
 
       <PlayerForm
         mode="edit"

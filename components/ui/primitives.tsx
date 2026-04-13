@@ -191,3 +191,15 @@ export function Divider({ className }: { className?: string }) {
 export function DataTable({ children }: { children: ReactNode }) {
   return <div className="app-table-wrap">{children}</div>;
 }
+
+type SkeletonBlockProps = {
+  className?: string;
+};
+
+export function SkeletonBlock({ className }: SkeletonBlockProps) {
+  return <div className={cx("app-skeleton", className)} aria-hidden="true" />;
+}
+
+export function SkeletonText({ className }: SkeletonBlockProps) {
+  return <div className={cx("app-skeleton h-3 rounded-full", className)} aria-hidden="true" />;
+}

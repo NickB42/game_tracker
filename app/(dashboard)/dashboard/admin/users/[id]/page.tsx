@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { UserEditForm } from "@/components/admin/users/user-edit-form";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAdminUser } from "@/lib/auth/guards";
 import { getApiErrorMessage, getUserById } from "@/lib/auth/user-management";
 import { prisma } from "@/lib/db/prisma";
@@ -41,16 +42,16 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
   });
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Manage user</h1>
-          <p className="mt-1 text-sm text-zinc-600">Update role, linked player, must-change policy, and temporary password.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/admin/users">
-          Back to users
-        </Link>
-      </div>
+    <section className="space-y-6">
+      <PageHeader
+        title="Manage user"
+        description="Update role, linked player, must-change policy, and temporary password."
+        actions={
+          <Link className="app-button app-button-secondary" href="/dashboard/admin/users">
+            Back to users
+          </Link>
+        }
+      />
 
       <UserEditForm
         user={{

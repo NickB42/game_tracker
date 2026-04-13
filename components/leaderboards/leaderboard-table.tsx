@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DataTable, EmptyState } from "@/components/ui/primitives";
 import type { LeaderboardRow } from "@/lib/db/leaderboards";
 
 type LeaderboardTableProps = {
@@ -9,48 +10,49 @@ type LeaderboardTableProps = {
 export function LeaderboardTable({ rows }: LeaderboardTableProps) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600" data-testid="leaderboard-empty-state">
-        No rounds recorded yet.
-      </p>
+      <EmptyState
+        title="No rounds recorded yet"
+        description="Complete a round in any session to generate rating updates and leaderboard standings."
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-200" data-testid="leaderboard-table">
-      <table className="min-w-full divide-y divide-zinc-200 text-sm">
-        <thead className="bg-zinc-50 text-left text-zinc-700">
+    <DataTable>
+      <table className="app-table min-w-full" data-testid="leaderboard-table">
+        <thead>
           <tr>
-            <th className="px-4 py-3 font-medium">Rank</th>
-            <th className="px-4 py-3 font-medium">Player</th>
-            <th className="px-4 py-3 font-medium">Rating</th>
-            <th className="px-4 py-3 font-medium">Mu</th>
-            <th className="px-4 py-3 font-medium">Sigma</th>
-            <th className="px-4 py-3 font-medium">Round wins</th>
-            <th className="px-4 py-3 font-medium">Match wins</th>
-            <th className="px-4 py-3 font-medium">Rounds played</th>
-            <th className="px-4 py-3 font-medium">Sessions played</th>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Rating</th>
+            <th>Mu</th>
+            <th>Sigma</th>
+            <th>Round wins</th>
+            <th>Match wins</th>
+            <th>Rounds played</th>
+            <th>Sessions played</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-200 bg-white text-zinc-800">
+        <tbody>
           {rows.map((row, index) => (
             <tr key={row.playerId}>
-              <td className="px-4 py-3">{index + 1}</td>
-              <td className="px-4 py-3 font-medium">
-                <Link className="underline" href={`/dashboard/players/${row.playerId}`}>
+              <td>{index + 1}</td>
+              <td className="font-medium text-[var(--text-primary)]">
+                <Link className="app-button app-button-ghost" href={`/dashboard/players/${row.playerId}`}>
                   {row.playerDisplayName}
                 </Link>
               </td>
-              <td className="px-4 py-3">{row.displayedRating.toFixed(2)}</td>
-              <td className="px-4 py-3">{row.mu.toFixed(2)}</td>
-              <td className="px-4 py-3">{row.sigma.toFixed(2)}</td>
-              <td className="px-4 py-3">{row.roundWins}</td>
-              <td className="px-4 py-3">{row.matchWins}</td>
-              <td className="px-4 py-3">{row.roundsPlayed}</td>
-              <td className="px-4 py-3">{row.sessionsPlayed}</td>
+              <td>{row.displayedRating.toFixed(2)}</td>
+              <td>{row.mu.toFixed(2)}</td>
+              <td>{row.sigma.toFixed(2)}</td>
+              <td>{row.roundWins}</td>
+              <td>{row.matchWins}</td>
+              <td>{row.roundsPlayed}</td>
+              <td>{row.sessionsPlayed}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   );
 }

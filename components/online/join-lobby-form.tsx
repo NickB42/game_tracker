@@ -1,12 +1,26 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import { joinOnlineLobbyAction, type OnlineLobbyFormState } from "@/actions/online";
+import { useToast } from "@/components/ui/toast";
 
 export function JoinLobbyForm() {
   const initialState: OnlineLobbyFormState = {};
   const [state, formAction, isPending] = useActionState(joinOnlineLobbyAction, initialState);
+  const { pushToast } = useToast();
+  const lastErrorMessageRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const message = state.message ?? state.fieldErrors?.code;
+
+    if (!message || message === lastErrorMessageRef.current) {
+      return;
+    }
+
+    lastErrorMessageRef.current = message;
+    pushToast({ title: "Could not join lobby", description: message, tone: "error" });
+  }, [pushToast, state.fieldErrors?.code, state.message]);
 
   return (
     <form action={formAction} className="app-card space-y-3 p-6">

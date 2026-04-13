@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AppButton, Divider, EmptyState, InfoRow, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditGroup } from "@/lib/domain/authorization";
 import { getGroupById } from "@/lib/db/groups";
@@ -20,93 +21,92 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
     notFound();
   }
 
+  const groupRecord = group as unknown as {
+    id: string;
+    name: string;
+    description: string | null;
+    ownerUserId: string;
+    owner: { name: string };
+    trustedAdmins: Array<{ id: string; userId: string; user: { name: string; email: string } }>;
+    memberships: Array<{ id: string; playerId: string; player: { id: string; displayName: string; isActive: boolean } }>;
+    _count: { gameSessions: number };
+  };
+
   const canManageGroup = canEditGroup(user, {
-    isOwner: group.ownerUserId === user.id,
-    isTrustedAdmin: group.trustedAdmins.some((entry) => entry.userId === user.id),
-    isMember: user.playerId ? group.memberships.some((membership) => membership.playerId === user.playerId) : false,
+    isOwner: groupRecord.ownerUserId === user.id,
+    isTrustedAdmin: groupRecord.trustedAdmins.some((entry) => entry.userId === user.id),
+    isMember: user.playerId ? groupRecord.memberships.some((membership) => membership.playerId === user.playerId) : false,
   });
 
   return (
-    <section className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">{group.name}</h1>
-          <p className="mt-1 text-sm text-zinc-600">Group details and current memberships.</p>
-        </div>
-        <div className="flex gap-3">
-          <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/groups">
-            Back to groups
-          </Link>
-          <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/leaderboards/groups/${group.id}`}>
-            Group leaderboard
-          </Link>
-          {canManageGroup ? (
-            <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/groups/${group.id}/edit`}>
-              Edit group
-            </Link>
-          ) : null}
-        </div>
-      </header>
+    <section className="space-y-6">
+      <PageHeader
+        title={groupRecord.name}
+        description="Group details, trusted admins, and current player memberships."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <AppButton variant="secondary" href="/dashboard/groups">
+              Back to groups
+            </AppButton>
+            <AppButton variant="ghost" href={`/dashboard/leaderboards/groups/${groupRecord.id}`}>
+              Group leaderboard
+            </AppButton>
+            {canManageGroup ? <AppButton href={`/dashboard/groups/${groupRecord.id}/edit`}>Edit group</AppButton> : null}
+          </div>
+        }
+      />
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Description</h2>
-        <p className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-          {group.description ?? "No description"}
-        </p>
-      </section>
+      <div className="grid gap-3 md:grid-cols-4">
+        <StatCard label="Owner" value={groupRecord.owner.name} tone="accent" />
+        <StatCard label="Members" value={groupRecord.memberships.length} />
+        <StatCard label="Trusted admins" value={groupRecord.trustedAdmins.length} tone="warning" />
+        <StatCard label="Sessions" value={groupRecord._count.gameSessions} />
+      </div>
 
-      <dl className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Owner</dt>
-          <dd className="text-zinc-900">{group.owner.name}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Members</dt>
-          <dd className="text-zinc-900">{group.memberships.length}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Trusted admins</dt>
-          <dd className="text-zinc-900">{group.trustedAdmins.length}</dd>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
-          <dt className="font-medium text-zinc-700">Game sessions</dt>
-          <dd className="text-zinc-900">{group._count.gameSessions}</dd>
-        </div>
-      </dl>
+      <SectionCard title="Group summary">
+        <dl className="rounded-[var(--radius-md)] border border-[var(--border)]">
+          <InfoRow label="Owner" value={groupRecord.owner.name} />
+          <Divider />
+          <InfoRow label="Description" value={groupRecord.description ?? "No description"} />
+        </dl>
+      </SectionCard>
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Trusted admins</h2>
-        {group.trustedAdmins.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600">No trusted admins assigned.</p>
+      <SectionCard title="Trusted admins" description="Users who can manage this group and linked sessions.">
+        {groupRecord.trustedAdmins.length === 0 ? (
+          <EmptyState title="No trusted admins" description="Only the owner currently has elevated management rights." />
         ) : (
-          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-            {group.trustedAdmins.map((trustedAdmin) => (
-              <li key={trustedAdmin.id} className="px-4 py-3 text-sm text-zinc-800">
-                {trustedAdmin.user.name}
-                <span className="ml-2 text-xs text-zinc-500">({trustedAdmin.user.email})</span>
+          <ul className="space-y-2">
+            {groupRecord.trustedAdmins.map((trustedAdmin) => (
+              <li key={trustedAdmin.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{trustedAdmin.user.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{trustedAdmin.user.email}</p>
+                </div>
+                <StatusBadge tone="warning">Trusted admin</StatusBadge>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </SectionCard>
 
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900">Members</h2>
-        {group.memberships.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600">No players are currently assigned to this group.</p>
+      <SectionCard title="Members">
+        {groupRecord.memberships.length === 0 ? (
+          <EmptyState title="No members yet" description="Assign players to this group from the edit view." />
         ) : (
-          <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200">
-            {group.memberships.map((membership) => (
-              <li key={membership.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <Link className="font-medium text-zinc-900 underline" href={`/dashboard/players/${membership.player.id}`}>
+          <ul className="space-y-2">
+            {groupRecord.memberships.map((membership) => (
+              <li key={membership.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-2">
+                <Link className="app-button app-button-ghost" href={`/dashboard/players/${membership.player.id}`}>
                   {membership.player.displayName}
                 </Link>
-                <span className="text-zinc-600">{membership.player.isActive ? "Active" : "Inactive"}</span>
+                <StatusBadge tone={membership.player.isActive ? "success" : "warning"}>
+                  {membership.player.isActive ? "Active" : "Inactive"}
+                </StatusBadge>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </SectionCard>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { getStoredThemeMode, setThemeMode, type ThemeMode } from "@/components/ui/theme-provider";
 
@@ -11,11 +11,7 @@ const OPTIONS: Array<{ value: ThemeMode; label: string }> = [
 ];
 
 export function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>("dark");
-
-  useEffect(() => {
-    setMode(getStoredThemeMode());
-  }, []);
+  const [mode, setMode] = useState<ThemeMode>(() => getStoredThemeMode());
 
   return (
     <label className="app-field-label">

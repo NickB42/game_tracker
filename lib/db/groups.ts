@@ -1,8 +1,53 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { buildGroupVisibilityWhere, type AuthorizationActor, type GroupAuthorizationContext } from "@/lib/domain/authorization";
 import { prisma } from "@/lib/db/prisma";
 import type { GroupInput, GroupMembershipUpdateInput, GroupWithMembersInput } from "@/lib/validation/group";
+
+const groupByIdInclude = Prisma.validator<Prisma.GroupInclude>()({
+  owner: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  trustedAdmins: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      user: {
+        name: "asc",
+      },
+    },
+  },
+  memberships: {
+    include: {
+      player: true,
+    },
+    orderBy: {
+      player: {
+        displayName: "asc",
+      },
+    },
+  },
+  _count: {
+    select: {
+      gameSessions: true,
+    },
+  },
+});
+
+type GroupDetailRecord = Prisma.GroupGetPayload<{
+  include: typeof groupByIdInclude;
+}>;
 
 function uniqueIds(ids: string[]) {
   return [...new Set(ids)];
@@ -39,52 +84,13 @@ export async function getGroups(actor: AuthorizationActor) {
   });
 }
 
-export async function getGroupById(id: string, actor: AuthorizationActor) {
+export async function getGroupById(id: string, actor: AuthorizationActor): Promise<GroupDetailRecord | null> {
   return prisma.group.findFirst({
     where: {
       id,
       ...buildGroupVisibilityWhere(actor),
     },
-    include: {
-      owner: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      trustedAdmins: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: {
-          user: {
-            name: "asc",
-          },
-        },
-      },
-      memberships: {
-        include: {
-          player: true,
-        },
-        orderBy: {
-          player: {
-            displayName: "asc",
-          },
-        },
-      },
-      _count: {
-        select: {
-          gameSessions: true,
-        },
-      },
-    },
+    include: groupByIdInclude,
   });
 }
 

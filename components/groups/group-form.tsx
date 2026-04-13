@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import { createGroupAction, type GroupFormState, updateGroupAction } from "@/actions/groups";
+import { Field, FormSection } from "@/components/ui/form-primitives";
+import { useToast } from "@/components/ui/toast";
 
 type SelectablePlayer = {
   id: string;
@@ -43,6 +45,8 @@ type GroupFormProps =
 
 export function GroupForm(props: GroupFormProps) {
   const action = props.mode === "edit" ? updateGroupAction.bind(null, props.groupId) : createGroupAction;
+  const { pushToast } = useToast();
+  const lastErrorMessageRef = useRef<string | null>(null);
 
   const initialState: GroupFormState = {};
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -51,105 +55,106 @@ export function GroupForm(props: GroupFormProps) {
   const selectedSet = new Set(defaults?.memberPlayerIds ?? []);
   const selectedTrustedAdminSet = new Set(defaults?.trustedAdminUserIds ?? []);
 
+  useEffect(() => {
+    if (!state.message || state.message === lastErrorMessageRef.current) {
+      return;
+    }
+
+    lastErrorMessageRef.current = state.message;
+    pushToast({
+      title: "Group action failed",
+      description: state.message,
+      tone: "error",
+    });
+  }, [pushToast, state.message]);
+
   return (
-    <form action={formAction} className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div>
-        <label htmlFor="name" className="mb-1 block text-sm font-medium text-zinc-700">
-          Group name
-        </label>
+    <form action={formAction} className="app-card space-y-5 p-6">
+      <Field id="name" label="Group name" error={state.fieldErrors?.name}>
         <input
           id="name"
           name="name"
           type="text"
           maxLength={80}
           defaultValue={defaults?.name ?? ""}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-input"
           required
         />
-        {state.fieldErrors?.name ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.name}</p> : null}
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="description" className="mb-1 block text-sm font-medium text-zinc-700">
-          Description
-        </label>
+      <Field id="description" label="Description" error={state.fieldErrors?.description}>
         <textarea
           id="description"
           name="description"
           maxLength={500}
           defaultValue={defaults?.description ?? ""}
           rows={4}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="app-textarea"
           placeholder="Optional description"
         />
-        {state.fieldErrors?.description ? (
-          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.description}</p>
-        ) : null}
-      </div>
+      </Field>
 
-      <section>
-        <h2 className="text-sm font-medium text-zinc-900">Trusted admins</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+      <FormSection title="Trusted admins" description="Trusted admins can edit this group. Their permissions are copied to linked sessions when those sessions are created or edited.">
+        <p className="text-sm text-[var(--text-muted)]">
           Trusted admins can edit this group. Their permissions are copied to linked sessions when those sessions are
           created or edited.
         </p>
 
-        <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+        <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectableUsers.length === 0 ? (
-            <p className="text-sm text-zinc-600">No users available yet.</p>
+            <p className="text-sm text-[var(--text-muted)]">No users available yet.</p>
           ) : (
             props.selectableUsers.map((user) => (
-              <label key={user.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
-                <span className="text-sm text-zinc-800">
+              <label key={user.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-xs)] px-2 py-1 hover:bg-[var(--surface-muted)]">
+                <span className="text-sm text-[var(--text-secondary)]">
                   {user.name}
-                  {user.email ? <span className="ml-2 text-xs text-zinc-500">({user.email})</span> : null}
+                  {user.email ? <span className="ml-2 text-xs text-[var(--text-muted)]">({user.email})</span> : null}
                 </span>
                 <input
                   type="checkbox"
                   name="trustedAdminUserIds"
                   value={user.id}
                   defaultChecked={selectedTrustedAdminSet.has(user.id)}
-                  className="size-4 rounded border-zinc-300"
+                  className="size-4 rounded border-[var(--border)]"
                 />
               </label>
             ))
           )}
         </div>
         {state.fieldErrors?.trustedAdminUserIds ? (
-          <p className="mt-1 text-sm text-red-600">{state.fieldErrors.trustedAdminUserIds}</p>
+          <p className="mt-1 text-xs text-[var(--danger)]">{state.fieldErrors.trustedAdminUserIds}</p>
         ) : null}
-      </section>
+      </FormSection>
 
-      <section>
-        <h2 className="text-sm font-medium text-zinc-900">Members</h2>
-        <p className="mt-1 text-sm text-zinc-600">Select existing players to include in this group.</p>
+      <FormSection title="Members" description="Select existing players to include in this group.">
+        <p className="text-sm text-[var(--text-muted)]">Select existing players to include in this group.</p>
 
-        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3">
+        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectablePlayers.length === 0 ? (
-            <p className="text-sm text-zinc-600">No players available yet.</p>
+            <p className="text-sm text-[var(--text-muted)]">No players available yet.</p>
           ) : (
             props.selectablePlayers.map((player) => (
-              <label key={player.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-zinc-50">
-                <span className="text-sm text-zinc-800">
+              <label key={player.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-xs)] px-2 py-1 hover:bg-[var(--surface-muted)]">
+                <span className="text-sm text-[var(--text-secondary)]">
                   {player.displayName}
-                  {!player.isActive ? <span className="ml-2 text-xs text-zinc-500">(inactive)</span> : null}
+                  {!player.isActive ? <span className="ml-2 text-xs text-[var(--text-muted)]">(inactive)</span> : null}
                 </span>
                 <input
                   type="checkbox"
                   name="playerIds"
                   value={player.id}
                   defaultChecked={selectedSet.has(player.id)}
-                  className="size-4 rounded border-zinc-300"
+                  className="size-4 rounded border-[var(--border)]"
                 />
               </label>
             ))
           )}
         </div>
-        {state.fieldErrors?.playerIds ? <p className="mt-1 text-sm text-red-600">{state.fieldErrors.playerIds}</p> : null}
-      </section>
+        {state.fieldErrors?.playerIds ? <p className="mt-1 text-xs text-[var(--danger)]">{state.fieldErrors.playerIds}</p> : null}
+      </FormSection>
 
       {state.message ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">
           {state.message}
         </div>
       ) : null}
@@ -157,7 +162,7 @@ export function GroupForm(props: GroupFormProps) {
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Saving..." : props.mode === "edit" ? "Save changes" : "Create group"}
       </button>

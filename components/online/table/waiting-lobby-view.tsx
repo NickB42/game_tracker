@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 
 import type { LobbySnapshot } from "@/components/online/types";
+import { StatusBadge } from "@/components/ui/primitives";
 
 type WaitingLobbyViewProps = {
   snapshot: LobbySnapshot;
@@ -10,15 +11,15 @@ type WaitingLobbyViewProps = {
 
 export function WaitingLobbyView({ snapshot }: WaitingLobbyViewProps) {
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-[radial-gradient(circle_at_top,#f0fdf4_0%,#ffffff_42%,#f8fafc_100%)] p-5 shadow-sm">
+    <section className="app-card rounded-2xl bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--accent-soft)_65%,transparent)_0%,var(--surface)_42%,var(--surface-muted)_100%)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-zinc-500">Join code</p>
-          <h3 className="text-3xl font-black tracking-[0.24em] text-zinc-900">{snapshot.lobby.code}</h3>
-          <p className="mt-1 text-sm text-zinc-600">Invite authenticated users with this code.</p>
+          <p className="app-caption uppercase tracking-wide">Join code</p>
+          <h3 className="text-3xl font-black tracking-[0.24em] text-[var(--text-primary)]">{snapshot.lobby.code}</h3>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Invite authenticated users with this code.</p>
         </div>
 
-        <div className="rounded-lg border border-zinc-200 bg-white/90 px-3 py-2 text-sm font-medium text-zinc-700">Players: {snapshot.players.length}/5</div>
+        <StatusBadge tone="accent">Players: {snapshot.players.length}/5</StatusBadge>
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -29,23 +30,21 @@ export function WaitingLobbyView({ snapshot }: WaitingLobbyViewProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04, type: "spring", stiffness: 240, damping: 20 }}
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+            className="app-card-muted rounded-lg px-3 py-2"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-zinc-900">{player.name}</p>
-              {player.isOwner ? <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900">Owner</span> : null}
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{player.name}</p>
+              {player.isOwner ? <StatusBadge tone="accent">Owner</StatusBadge> : null}
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <p className={player.readyState ? "rounded-md bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700" : "rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"}>
-                {player.readyState ? "Ready" : "Not ready"}
-              </p>
-              <p className={player.isConnected ? "text-xs text-emerald-600" : "text-xs text-zinc-400"}>{player.isConnected ? "Connected" : "Disconnected"}</p>
+              <StatusBadge tone={player.readyState ? "success" : "warning"}>{player.readyState ? "Ready" : "Not ready"}</StatusBadge>
+              <StatusBadge tone={player.isConnected ? "success" : "neutral"}>{player.isConnected ? "Connected" : "Disconnected"}</StatusBadge>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-zinc-500">Use the sidebar controls to ready up, start, leave, or close the lobby.</p>
+      <p className="mt-4 text-xs text-[var(--text-muted)]">Use the sidebar controls to ready up, start, leave, or close the lobby.</p>
     </section>
   );
 }
