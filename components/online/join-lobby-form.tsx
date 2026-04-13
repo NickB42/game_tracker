@@ -9,9 +9,9 @@ export function JoinLobbyForm() {
   const [state, formAction, isPending] = useActionState(joinOnlineLobbyAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-zinc-900">Join Lobby</h2>
-      <label htmlFor="code" className="block text-sm font-medium text-zinc-700">
+    <form action={formAction} className="app-card space-y-3 p-6">
+      <h2 className="app-section-title">Join Lobby</h2>
+      <label htmlFor="code" className="app-field-label block">
         Join code
       </label>
       <input
@@ -19,18 +19,18 @@ export function JoinLobbyForm() {
         name="code"
         type="text"
         maxLength={6}
-        className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm uppercase outline-none focus:border-zinc-500"
+        className="app-input uppercase tracking-[0.06em]"
         placeholder="ABC123"
         required
       />
 
-      {state.fieldErrors?.code ? <p className="text-sm text-red-600">{state.fieldErrors.code}</p> : null}
-      {state.message ? <p className="text-sm text-red-600">{state.message}</p> : null}
+      {state.fieldErrors?.code ? <p className="text-xs text-[var(--danger)]">{state.fieldErrors.code}</p> : null}
+      {state.message ? <p className="text-xs text-[var(--danger)]">{state.message}</p> : null}
 
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-60"
+        className="app-button app-button-secondary disabled:opacity-60"
       >
         {isPending ? "Joining..." : "Join lobby"}
       </button>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SessionForm } from "@/components/sessions/session-form";
+import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
@@ -23,15 +24,15 @@ export default async function NewSessionPage() {
 
   return (
     <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Create game session</h1>
-          <p className="mt-1 text-sm text-zinc-600">Record when a session was played and who actually attended.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href="/dashboard/sessions">
-          Back to sessions
-        </Link>
-      </div>
+      <PageHeader
+        title="Create Game Session"
+        description="Record when a session was played and who attended."
+        actions={
+          <Link className="app-button app-button-ghost" href="/dashboard/sessions">
+            Back to sessions
+          </Link>
+        }
+      />
 
       <SessionForm
         mode="create"

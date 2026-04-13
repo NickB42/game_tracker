@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { LogoutButton } from "@/components/auth/logout-button";
+import { AppCard, AppButton, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { auth } from "@/lib/auth/auth";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
@@ -32,74 +32,75 @@ export default async function DashboardPage() {
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm" data-testid="dashboard-auth-shell">
-      <h1 className="text-2xl font-semibold text-zinc-900" data-testid="dashboard-heading">Dashboard</h1>
-      <p className="mt-2 text-sm text-zinc-600">Authenticated application shell.</p>
+    <section className="space-y-6" data-testid="dashboard-auth-shell">
+      <PageHeader
+        title="Dashboard"
+        description="Overview of your account context and fast navigation into the tracker."
+        actions={<StatusBadge tone="accent">Signed In</StatusBadge>}
+      />
 
-      <dl className="mt-6 space-y-3 text-sm">
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
-          <dt className="font-medium text-zinc-700">Name</dt>
-          <dd className="text-zinc-900">{user.name}</dd>
-        </div>
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
-          <dt className="font-medium text-zinc-700">Role</dt>
-          <dd className="text-zinc-900">{user.role}</dd>
-        </div>
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
-          <dt className="font-medium text-zinc-700">Linked player</dt>
-          <dd className="text-zinc-900">{user.playerId ? "Yes" : "No"}</dd>
-        </div>
-      </dl>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Role" value={user.role} tone="accent" />
+        <StatCard label="Linked Player" value={user.playerId ? "Connected" : "Not linked"} tone={user.playerId ? "success" : "warning"} />
+        <StatCard label="Access" value="Invite Only" hint="Account creation is managed by admins" />
+      </div>
 
-      <nav className="mt-8 flex flex-wrap gap-3">
-        <Link
-          href="/dashboard/players"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <SectionCard
+          title="Quick Actions"
+          description="Jump directly to the core modules."
+          actions={<AppButton href="/dashboard/online-play">Open Online Play</AppButton>}
         >
-          Open players
-        </Link>
-        <Link
-          href="/dashboard/groups"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-        >
-          Open groups
-        </Link>
-        <Link
-          href="/dashboard/sessions"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-        >
-          Open sessions
-        </Link>
-        <Link
-          href="/dashboard/leaderboards"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-        >
-          Open leaderboards
-        </Link>
-        <Link
-          href="/dashboard/online-play"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-        >
-          Online play
-        </Link>
-        <Link
-          href="/dashboard/settings/security"
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-        >
-          Security settings
-        </Link>
-        {user.role === "ADMIN" ? (
-          <Link
-            href="/dashboard/admin/users"
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
-          >
-            User management
+          <div className="grid gap-2 sm:grid-cols-2">
+            <AppButton href="/dashboard/players" variant="secondary" className="justify-start">
+              Players
+            </AppButton>
+            <AppButton href="/dashboard/groups" variant="secondary" className="justify-start">
+              Groups
+            </AppButton>
+            <AppButton href="/dashboard/sessions" variant="secondary" className="justify-start">
+              Sessions
+            </AppButton>
+            <AppButton href="/dashboard/leaderboards" variant="secondary" className="justify-start">
+              Leaderboards
+            </AppButton>
+            <AppButton href="/dashboard/settings/security" variant="ghost" className="justify-start">
+              Security Settings
+            </AppButton>
+            {user.role === "ADMIN" ? (
+              <AppButton href="/dashboard/admin/users" variant="ghost" className="justify-start">
+                User Management
+              </AppButton>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <AppCard>
+          <h2 className="app-section-title">Profile Snapshot</h2>
+          <dl className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+            <div className="app-card-muted flex items-center justify-between px-3 py-2">
+              <dt className="text-[var(--text-muted)]">Name</dt>
+              <dd>{user.name}</dd>
+            </div>
+            <div className="app-card-muted flex items-center justify-between px-3 py-2">
+              <dt className="text-[var(--text-muted)]">Role</dt>
+              <dd>
+                <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>{user.role}</StatusBadge>
+              </dd>
+            </div>
+            <div className="app-card-muted flex items-center justify-between px-3 py-2">
+              <dt className="text-[var(--text-muted)]">Linked player</dt>
+              <dd>{user.playerId ? "Yes" : "No"}</dd>
+            </div>
+          </dl>
+
+          <p className="mt-5 text-sm text-[var(--text-muted)]">
+            Want to change credentials or review account security?
+          </p>
+          <Link href="/dashboard/settings/security" className="app-button app-button-ghost mt-2 px-0">
+            Open security settings
           </Link>
-        ) : null}
-      </nav>
-
-      <div className="mt-8">
-        <LogoutButton />
+        </AppCard>
       </div>
     </section>
   );
