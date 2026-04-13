@@ -33,7 +33,7 @@ export default async function DashboardPage() {
 
   return (
     <section className="space-y-6" data-testid="dashboard-auth-shell">
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Dashboard" data-testid="dashboard-heading" />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Role" value={user.role} tone="accent" />

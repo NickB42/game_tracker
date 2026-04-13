@@ -8,18 +8,19 @@ function cx(...parts: ClassValue[]) {
 }
 
 type PageHeaderProps = {
-  title: string;
+  title: ReactNode;
   description?: string;
   actions?: ReactNode;
   eyebrow?: string;
+  "data-testid"?: string;
 };
 
-export function PageHeader({ title, description, actions, eyebrow }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, eyebrow, "data-testid": dataTestId }: PageHeaderProps) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="space-y-2">
         {eyebrow ? <p className="app-caption uppercase tracking-[0.12em]">{eyebrow}</p> : null}
-        <h1 className="app-page-title">{title}</h1>
+        <h1 className="app-page-title" data-testid={dataTestId}>{title}</h1>
         {description ? <p className="max-w-3xl text-sm text-[var(--text-muted)]">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -140,6 +141,13 @@ export function AppButton({
   const classes = cx("app-button", variantClass, disabled ? "cursor-not-allowed opacity-60" : "", className);
 
   if (href) {
+    if (disabled) {
+      return (
+        <span className={classes} aria-disabled="true" tabIndex={-1} data-testid={dataTestId}>
+          {children}
+        </span>
+      );
+    }
     return (
       <Link href={href} className={classes} data-testid={dataTestId}>
         {children}
@@ -158,11 +166,12 @@ type EmptyStateProps = {
   title: string;
   description: string;
   action?: ReactNode;
+  "data-testid"?: string;
 };
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({ title, description, action, "data-testid": dataTestId }: EmptyStateProps) {
   return (
-    <div className="app-empty">
+    <div className="app-empty" data-testid={dataTestId}>
       <p className="text-sm font-semibold text-[var(--text-secondary)]">{title}</p>
       <p className="mt-1 text-sm">{description}</p>
       {action ? <div className="mt-3">{action}</div> : null}

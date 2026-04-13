@@ -26,6 +26,7 @@ export default async function PlayerDetailPage({ params }: PlayerDetailPageProps
       <PageHeader
         title={player.displayName}
         description="Player details and current group memberships."
+        data-testid="player-detail-heading"
         actions={
           <div className="flex flex-wrap gap-2">
             <AppButton variant="secondary" href="/dashboard/players">

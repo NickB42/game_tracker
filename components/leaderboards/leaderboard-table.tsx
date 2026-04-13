@@ -13,6 +13,7 @@ export function LeaderboardTable({ rows }: LeaderboardTableProps) {
       <EmptyState
         title="No rounds recorded yet"
         description="Complete a round in any session to generate rating updates and leaderboard standings."
+        data-testid="leaderboard-empty-state"
       />
     );
   }

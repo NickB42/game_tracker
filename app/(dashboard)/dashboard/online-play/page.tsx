@@ -6,17 +6,11 @@ import { EmptyState, PageHeader, SectionCard, StatusBadge } from "@/components/u
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { listOpenOnlineLobbies } from "@/lib/db/online";
 
-type OpenLobbyView = {
-  id: string;
-  code: string;
-  status: string;
-  playerCount: number;
-  players: Array<{ userId: string; name: string }>;
-};
+type OpenLobbyView = Awaited<ReturnType<typeof listOpenOnlineLobbies>>[number];
 
 export default async function OnlinePlayPage() {
   const user = await requireAuthenticatedUser();
-  const lobbies = (await listOpenOnlineLobbies()) as OpenLobbyView[];
+  const lobbies = await listOpenOnlineLobbies();
 
   return (
     <section className="space-y-6" data-testid="online-play-page">

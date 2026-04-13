@@ -30,13 +30,8 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
     notFound();
   }
 
-  const groupRecord = group as unknown as {
-    id: string;
-    name: string;
-    description: string | null;
-    trustedAdmins: Array<{ userId: string }>;
-    memberships: Array<{ playerId: string }>;
-  };
+  type GroupRecord = NonNullable<Awaited<ReturnType<typeof getGroupById>>>;
+  const groupRecord: GroupRecord = group;
 
   return (
     <section className="space-y-6">
