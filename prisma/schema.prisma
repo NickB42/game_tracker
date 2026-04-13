@@ -242,7 +242,7 @@ model OnlineGame {
   players OnlineGamePlayer[]
   events  OnlineGameEvent[]
 
-  @@unique([lobbyId])
+  @@index([lobbyId])
   @@index([status])
   @@index([currentTurnPlayerId])
   @@index([loserUserId])

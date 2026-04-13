@@ -164,6 +164,24 @@ async function getActiveLobbyPlayers(db: Db, lobbyId: string) {
   });
 }
 
+async function getCurrentInProgressGame(db: Db, lobbyId: string) {
+  return db.onlineGame.findFirst({
+    where: {
+      lobbyId,
+      status: "IN_PROGRESS",
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      status: true,
+      moveNumber: true,
+      privateStateJson: true,
+    },
+  });
+}
+
 function nextSeatIndex(players: Array<{ seatIndex: number }>) {
   if (players.length === 0) {
     return 0;
@@ -460,14 +478,26 @@ export async function startOnlineLobbyGame(ownerUserId: string, lobbyId: string)
       throw new Error("Only the owner can start the game.");
     }
 
-    if (lobby.status !== "WAITING") {
-      throw new Error("Lobby is not in waiting state.");
+    if (lobby.status !== "WAITING" && lobby.status !== "FINISHED") {
+      throw new Error("Lobby is not ready to start a new round.");
     }
 
     const players = await getActiveLobbyPlayers(tx, lobbyId);
 
     if (players.length < ONLINE_LOBBY_MIN_PLAYERS) {
       throw new Error("At least 2 players are required to start.");
+    }
+
+    const notReady = players.filter((player) => !player.readyState);
+
+    if (notReady.length > 0) {
+      throw new Error("All players must mark ready before a new round starts.");
+    }
+
+    const existingInProgress = await getCurrentInProgressGame(tx, lobbyId);
+
+    if (existingInProgress) {
+      throw new Error("A round is already in progress in this lobby.");
     }
 
     const seatOrderedUserIds = players.map((player) => player.userId);
@@ -521,6 +551,16 @@ export async function startOnlineLobbyGame(ownerUserId: string, lobbyId: string)
       },
     });
 
+    await tx.onlineLobbyPlayer.updateMany({
+      where: {
+        lobbyId,
+        leftAt: null,
+      },
+      data: {
+        readyState: false,
+      },
+    });
+
     await appendEvent(tx, {
       lobbyId,
       gameId: game.id,
@@ -537,14 +577,7 @@ export async function startOnlineLobbyGame(ownerUserId: string, lobbyId: string)
 
 export async function submitOnlineSwap(userId: string, lobbyId: string, handCardIds: string[], faceUpCardIds: string[]) {
   return prisma.$transaction(async (tx) => {
-    const game = await tx.onlineGame.findUnique({
-      where: { lobbyId },
-      select: {
-        id: true,
-        status: true,
-        privateStateJson: true,
-      },
-    });
+    const game = await getCurrentInProgressGame(tx, lobbyId);
 
     if (!game || game.status !== "IN_PROGRESS") {
       throw new Error("No active game for this lobby.");
@@ -597,14 +630,7 @@ export async function beginActiveTurns(ownerUserId: string, lobbyId: string) {
       throw new Error("Only the owner can begin turns.");
     }
 
-    const game = await tx.onlineGame.findUnique({
-      where: { lobbyId },
-      select: {
-        id: true,
-        status: true,
-        privateStateJson: true,
-      },
-    });
+    const game = await getCurrentInProgressGame(tx, lobbyId);
 
     if (!game || game.status !== "IN_PROGRESS") {
       throw new Error("No active game to start.");
@@ -614,6 +640,16 @@ export async function beginActiveTurns(ownerUserId: string, lobbyId: string) {
 
     if (envelope.game.phase !== "swap") {
       return;
+    }
+
+    const activePlayers = await getActiveLobbyPlayers(tx, lobbyId);
+    const lockedSet = new Set(envelope.swapLockedUserIds);
+    const missingSelections = activePlayers
+      .map((player) => player.userId)
+      .filter((userId) => !lockedSet.has(userId));
+
+    if (missingSelections.length > 0) {
+      throw new Error("All players must choose and lock their 3 face-up cards before turns can begin.");
     }
 
     envelope.game = startGameFromSwapState(envelope.game);
@@ -643,15 +679,7 @@ export async function beginActiveTurns(ownerUserId: string, lobbyId: string) {
 
 export async function applyOnlineMove(userId: string, lobbyId: string, move: PlayerMove) {
   return prisma.$transaction(async (tx) => {
-    const game = await tx.onlineGame.findUnique({
-      where: { lobbyId },
-      select: {
-        id: true,
-        status: true,
-        moveNumber: true,
-        privateStateJson: true,
-      },
-    });
+    const game = await getCurrentInProgressGame(tx, lobbyId);
 
     if (!game || game.status !== "IN_PROGRESS") {
       throw new Error("No active game for this lobby.");
@@ -685,6 +713,16 @@ export async function applyOnlineMove(userId: string, lobbyId: string, move: Pla
         where: { id: lobbyId },
         data: {
           status: "FINISHED",
+        },
+      });
+
+      await tx.onlineLobbyPlayer.updateMany({
+        where: {
+          lobbyId,
+          leftAt: null,
+        },
+        data: {
+          readyState: false,
         },
       });
     }
@@ -861,7 +899,7 @@ export async function exportFinishedOnlineGameToTracker(userId: string, lobbyId:
       include: {
         games: {
           orderBy: { createdAt: "desc" },
-          take: 1,
+          take: 20,
         },
       },
     });
@@ -870,7 +908,7 @@ export async function exportFinishedOnlineGameToTracker(userId: string, lobbyId:
       throw new Error("Lobby not found.");
     }
 
-    const game = lobby.games[0];
+    const game = lobby.games.find((candidate) => candidate.status === "FINISHED") ?? lobby.games[0];
 
     if (!game || game.status !== "FINISHED") {
       throw new Error("Only finished online games can be exported.");
@@ -878,7 +916,7 @@ export async function exportFinishedOnlineGameToTracker(userId: string, lobbyId:
 
     const alreadyExported = await tx.gameSession.findFirst({
       where: {
-        title: `Online lobby ${lobby.code}`,
+        title: `Online lobby ${lobby.code} (${game.id.slice(0, 8)})`,
         source: "ONLINE",
       },
       select: { id: true },
@@ -922,9 +960,9 @@ export async function exportFinishedOnlineGameToTracker(userId: string, lobbyId:
     const session = await createGameSession(
       {
         groupId: undefined,
-        title: `Online lobby ${lobby.code}`,
+        title: `Online lobby ${lobby.code} (${game.id.slice(0, 8)})`,
         playedAt: game.finishedAt ?? now(),
-        notes: "Imported from online multiplayer match.",
+        notes: `Imported from online multiplayer match ${game.id}.`,
         participantIds: playerIds,
         createdByUserId: userId,
         source: "ONLINE",

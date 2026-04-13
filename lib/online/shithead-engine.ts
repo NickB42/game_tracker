@@ -48,13 +48,13 @@ export type GameState = {
 export type PlayerMove =
   | { type: "play"; cardIds: string[] }
   | { type: "pickup" }
-  | { type: "blind_play"; cardId: string }
+  | { type: "blind_play" }
   | { type: "face_up_pickup"; cardId: string };
 
 export type LegalMove =
   | { type: "play"; cardIds: string[] }
   | { type: "pickup" }
-  | { type: "blind_play"; cardId: string }
+  | { type: "blind_play" }
   | { type: "face_up_pickup"; cardId: string };
 
 export type MoveResolution = {
@@ -399,7 +399,7 @@ export function getLegalMoves(state: GameState): LegalMove[] {
   const effectivePile = getEffectivePileState(state.discardPile);
 
   if (source === "face_down_blind") {
-    return player.tableFaceDown.map((card) => ({ type: "blind_play" as const, cardId: card.id }));
+    return player.tableFaceDown.length > 0 ? [{ type: "blind_play" as const }] : [];
   }
 
   const cards = source === "hand" ? player.hand : player.tableFaceUp;
@@ -609,7 +609,12 @@ function ensureCurrentPlayer(state: GameState, actingUserId: string): PlayerGame
   return player;
 }
 
-export function applyMove(state: GameState, actingUserId: string, move: PlayerMove): MoveResolution {
+export function applyMove(
+  state: GameState,
+  actingUserId: string,
+  move: PlayerMove,
+  randomFn: (maxExclusive: number) => number = (maxExclusive) => randomInt(maxExclusive),
+): MoveResolution {
   requireActivePhase(state);
 
   const legalMoves = getLegalMoves(state);
@@ -620,7 +625,7 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
       }
 
       if (legal.type === "blind_play") {
-        return `blind:${legal.cardId}`;
+        return "blind";
       }
 
       if (legal.type === "face_up_pickup") {
@@ -637,7 +642,7 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
     }
 
     if (move.type === "blind_play") {
-      return `blind:${move.cardId}`;
+      return "blind";
     }
 
     if (move.type === "face_up_pickup") {
@@ -661,11 +666,10 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
     player.hand.push(...next.discardPile);
     next.discardPile = [];
 
-    const nextSeat = advanceTurn(next, player.seatIndex, 0);
-    next.currentPlayerSeatIndex = nextSeat;
+    next.currentPlayerSeatIndex = player.seatIndex;
     next.turnNumber += 1;
 
-    events.push(`${actingUserId} picked up the pile.`);
+    events.push(`${actingUserId} picked up the pile and starts a new pile.`);
     events.push(...maybeMarkEliminations(next));
 
     return {
@@ -673,7 +677,7 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
       events,
       burned: false,
       pickedUp: true,
-      nextTurnSeatIndex: nextSeat,
+      nextTurnSeatIndex: player.seatIndex,
     };
   }
 
@@ -684,11 +688,10 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
     player.hand.push(...next.discardPile);
     next.discardPile = [];
 
-    const nextSeat = advanceTurn(next, player.seatIndex, 0);
-    next.currentPlayerSeatIndex = nextSeat;
+    next.currentPlayerSeatIndex = player.seatIndex;
     next.turnNumber += 1;
 
-    events.push(`${actingUserId} placed a face-up card then picked up the pile.`);
+    events.push(`${actingUserId} placed a face-up card, picked up the pile, and starts a new pile.`);
     events.push(...maybeMarkEliminations(next));
 
     return {
@@ -696,19 +699,21 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
       events,
       burned: false,
       pickedUp: true,
-      nextTurnSeatIndex: nextSeat,
+      nextTurnSeatIndex: player.seatIndex,
     };
   }
 
   if (move.type === "blind_play") {
-    const { removed, remaining } = removeCardsById(player.tableFaceDown, [move.cardId]);
-    const [flipped] = removed;
+    if (player.tableFaceDown.length === 0) {
+      throw new Error("No face-down cards available.");
+    }
+
+    const pickedIndex = randomFn(player.tableFaceDown.length);
+    const [flipped] = player.tableFaceDown.splice(pickedIndex, 1);
 
     if (!flipped) {
       throw new Error("Blind card not found.");
     }
-
-    player.tableFaceDown = remaining;
 
     if (isCardLegalAgainstPile(flipped, previousEffective)) {
       next.discardPile.push(flipped);
@@ -723,7 +728,7 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
       }
 
       next.turnNumber += 1;
-      events.push(`${actingUserId} blind-played ${flipped.rank}.`);
+      events.push(`${actingUserId} randomly flipped and played ${flipped.rank}.`);
       events.push(...post.events);
       events.push(...maybeMarkEliminations(next));
 
@@ -740,11 +745,10 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
     player.hand.push(...next.discardPile);
     next.discardPile = [];
 
-    const nextSeat = advanceTurn(next, player.seatIndex, 0);
-    next.currentPlayerSeatIndex = nextSeat;
+    next.currentPlayerSeatIndex = player.seatIndex;
     next.turnNumber += 1;
 
-    events.push(`${actingUserId} blind-played illegally and picked up the pile.`);
+    events.push(`${actingUserId} randomly flipped ${flipped.rank}, could not play it, picked up the pile, and starts a new pile.`);
     events.push(...maybeMarkEliminations(next));
 
     return {
@@ -752,7 +756,7 @@ export function applyMove(state: GameState, actingUserId: string, move: PlayerMo
       events,
       burned: false,
       pickedUp: true,
-      nextTurnSeatIndex: nextSeat,
+      nextTurnSeatIndex: player.seatIndex,
     };
   }
 
@@ -806,10 +810,11 @@ export function getPublicPlayerView(state: GameState, viewerUserId: string) {
   return state.players.map((player) => ({
     userId: player.userId,
     seatIndex: player.seatIndex,
-    handCount: player.userId === viewerUserId ? player.hand.length : player.hand.length,
+    handCount: player.hand.length,
     hand: player.userId === viewerUserId ? player.hand : undefined,
     tableFaceUp: player.tableFaceUp,
     faceDownCount: player.tableFaceDown.length,
+    faceDownCards: player.userId === viewerUserId ? player.tableFaceDown : undefined,
     isOut: player.isOut,
     isLoser: player.isLoser,
     placement: player.placement,

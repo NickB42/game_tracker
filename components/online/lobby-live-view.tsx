@@ -36,7 +36,7 @@ type LobbySnapshot = {
       legalMoves: Array<
         | { type: "play"; cardIds: string[] }
         | { type: "pickup" }
-        | { type: "blind_play"; cardId: string }
+        | { type: "blind_play" }
         | { type: "face_up_pickup"; cardId: string }
       >;
       players: Array<{
@@ -46,6 +46,7 @@ type LobbySnapshot = {
         hand?: Array<{ id: string; rank: string; suit: string }>;
         tableFaceUp: Array<{ id: string; rank: string; suit: string }>;
         faceDownCount: number;
+        faceDownCards?: Array<{ id: string; rank: string; suit: string }>;
         isOut: boolean;
         isLoser: boolean;
         placement: number | null;
@@ -71,6 +72,16 @@ type LobbyLiveViewProps = {
 
 function cardLabel(card: { rank: string; suit: string }) {
   return `${card.rank}${card.suit}`;
+}
+
+function formatEventTime(value: string | Date): string {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return `${parsed.toISOString().slice(11, 19)} UTC`;
 }
 
 export function LobbyLiveView({ lobbyId, viewerUserId, initialSnapshot }: LobbyLiveViewProps) {
@@ -198,6 +209,9 @@ export function LobbyLiveView({ lobbyId, viewerUserId, initialSnapshot }: LobbyL
                 </p>
                 <p className="text-zinc-600">Hand count: {player.handCount}</p>
                 <p className="text-zinc-600">Face-down count: {player.faceDownCount}</p>
+                {player.userId === viewerUserId && player.faceDownCards ? (
+                  <p className="text-zinc-600">Your face-down cards: {player.faceDownCards.map((card) => cardLabel(card)).join(", ") || "-"}</p>
+                ) : null}
                 <p className="text-zinc-600">Face-up: {player.tableFaceUp.map((card) => cardLabel(card)).join(", ") || "-"}</p>
                 <p className="text-zinc-600">Status: {player.isLoser ? "Loser" : player.isOut ? "Out" : "Active"}</p>
                 {player.userId === viewerUserId && player.hand ? (
@@ -224,7 +238,7 @@ export function LobbyLiveView({ lobbyId, viewerUserId, initialSnapshot }: LobbyL
                     {move.type === "play"
                       ? `Play ${move.cardIds.join(", ")}`
                       : move.type === "blind_play"
-                        ? `Blind play ${move.cardId}`
+                        ? "Blind play (random)"
                         : move.type === "face_up_pickup"
                           ? `Face-up pickup (${move.cardId})`
                           : "Pickup"}
@@ -254,7 +268,7 @@ export function LobbyLiveView({ lobbyId, viewerUserId, initialSnapshot }: LobbyL
           {snapshot.events.slice(-20).map((event) => (
             <li key={event.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
               <p className="font-medium">{event.type}</p>
-              <p className="text-xs text-zinc-500">{new Date(event.createdAt).toLocaleTimeString()}</p>
+              <p className="text-xs text-zinc-500">{formatEventTime(event.createdAt)}</p>
             </li>
           ))}
         </ul>

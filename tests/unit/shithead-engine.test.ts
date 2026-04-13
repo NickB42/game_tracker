@@ -145,7 +145,7 @@ test("four of a kind burns including four 3s", () => {
   assert.equal(result.state.discardPile.length, 0);
 });
 
-test("pickup takes entire pile and passes turn", () => {
+test("pickup takes entire pile and same player starts new pile", () => {
   const game = state({
     players: [player("u1", 0, [card("h9", "9")]), player("u2", 1, [card("x1", "4")])],
     discardPile: [card("d1", "K"), card("d2", "A")],
@@ -155,7 +155,7 @@ test("pickup takes entire pile and passes turn", () => {
   const result = applyMove(game, "u1", { type: "pickup" });
   assert.equal(result.state.discardPile.length, 0);
   assert.equal(result.state.players[0].hand.length, 3);
-  assert.equal(result.state.currentPlayerSeatIndex, 1);
+  assert.equal(result.state.currentPlayerSeatIndex, 0);
 });
 
 test("after hand play, refill to three while draw remains", () => {
@@ -189,9 +189,10 @@ test("blind face-down illegal card forces pickup including flipped card", () => 
     currentPlayerSeatIndex: 0,
   });
 
-  const result = applyMove(game, "u1", { type: "blind_play", cardId: "fd1" });
+  const result = applyMove(game, "u1", { type: "blind_play" }, () => 0);
   assert.equal(result.pickedUp, true);
   assert.equal(result.state.players[0].hand.some((entry) => entry.id === "fd1"), true);
+  assert.equal(result.state.currentPlayerSeatIndex, 0);
 });
 
 test("player elimination and last player loses", () => {

@@ -59,10 +59,11 @@ export async function joinOnlineLobbyAction(
     };
   }
 
+  let lobbyId: string;
+
   try {
     const lobby = await joinOnlineLobbyByCode(user.id, parsed.data.code);
-    revalidatePath("/dashboard/online-play");
-    redirect(`/dashboard/online-play/${lobby.id}`);
+    lobbyId = lobby.id;
   } catch (error) {
     if (error instanceof Error) {
       return { message: error.message };
@@ -70,6 +71,9 @@ export async function joinOnlineLobbyAction(
 
     throw error;
   }
+
+  revalidatePath("/dashboard/online-play");
+  redirect(`/dashboard/online-play/${lobbyId}`);
 }
 
 export async function leaveOnlineLobbyAction(lobbyId: string): Promise<void> {
@@ -110,14 +114,31 @@ export async function submitOnlineSwapAction(
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 
+  const visibleCardIds = formData
+    .getAll("visibleCardIds")
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
   const faceUpCardIds = formData
     .getAll("faceUpCardIds")
     .filter((entry): entry is string => typeof entry === "string")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 
+  const resolvedHandCardIds =
+    handCardIds.length > 0
+      ? handCardIds
+      : visibleCardIds.filter((cardId) => !new Set(faceUpCardIds).has(cardId));
+
+  if (faceUpCardIds.length !== 3 || resolvedHandCardIds.length !== 3) {
+    return {
+      message: "Choose exactly 3 face-up cards. The remaining 3 become your hand.",
+    };
+  }
+
   try {
-    await submitOnlineSwap(user.id, lobbyId, handCardIds, faceUpCardIds);
+    await submitOnlineSwap(user.id, lobbyId, resolvedHandCardIds, faceUpCardIds);
   } catch (error) {
     if (error instanceof Error) {
       return { message: error.message };

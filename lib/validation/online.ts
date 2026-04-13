@@ -41,7 +41,6 @@ export const onlineMoveSchema = z.object({
     }),
     z.object({
       type: z.literal("blind_play"),
-      cardId: z.string().min(2).max(8),
     }),
     z.object({
       type: z.literal("face_up_pickup"),
