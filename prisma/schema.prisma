@@ -17,6 +17,12 @@ enum GameSessionSource {
   ONLINE
 }
 
+enum ActivityType {
+  CARD
+  SQUASH
+  PADEL
+}
+
 enum OnlineLobbyStatus {
   WAITING
   IN_PROGRESS
@@ -129,6 +135,7 @@ model Player {
   user                User?
   groupMemberships    GroupMembership[]
   sessionParticipants SessionParticipant[]
+  matchParticipants   MatchParticipant[]
 
   @@index([displayName])
   @@index([archivedAt])
@@ -137,6 +144,7 @@ model Player {
 model Group {
   id          String   @id @default(cuid())
   ownerUserId String
+  activityType ActivityType @default(CARD)
   name        String
   description String?
   archivedAt  DateTime?
@@ -150,6 +158,7 @@ model Group {
 
   @@unique([name])
   @@index([ownerUserId])
+  @@index([activityType])
   @@index([archivedAt])
 }
 
@@ -183,6 +192,7 @@ model GameSession {
   id              String   @id @default(cuid())
   groupId         String?
   ownerUserId     String
+  activityType    ActivityType @default(CARD)
   title           String?
   playedAt        DateTime
   notes           String?
@@ -198,12 +208,75 @@ model GameSession {
   trustedAdmins GameSessionTrustedAdmin[]
   participants  SessionParticipant[]
   roundResults  RoundResult[]
+  matches       Match[]
 
   @@index([groupId])
   @@index([ownerUserId])
+  @@index([activityType])
   @@index([createdByUserId])
   @@index([playedAt])
   @@index([archivedAt])
+}
+
+model Match {
+  id             String   @id @default(cuid())
+  gameSessionId  String
+  sequenceNumber Int
+  notes          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gameSession  GameSession        @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participants MatchParticipant[]
+  result       MatchResult?
+
+  @@unique([gameSessionId, sequenceNumber])
+  @@index([gameSessionId])
+}
+
+model MatchParticipant {
+  id         String   @id @default(cuid())
+  matchId    String
+  playerId   String
+  sideNumber Int?
+  seatOrder  Int?
+  createdAt  DateTime @default(now())
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@unique([matchId, playerId])
+  @@index([playerId])
+  @@index([matchId, sideNumber])
+}
+
+model MatchResult {
+  id                String   @id @default(cuid())
+  matchId           String   @unique
+  winningSideNumber Int?
+  isDraw            Boolean  @default(false)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  match      Match            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  scoreLines MatchScoreLine[]
+}
+
+model MatchScoreLine {
+  id            String   @id @default(cuid())
+  matchResultId String
+  sequenceNumber Int
+  sideNumber    Int
+  score         Int
+  createdAt     DateTime @default(now())
+
+  matchResult MatchResult @relation(fields: [matchResultId], references: [id], onDelete: Cascade)
+
+  @@unique([matchResultId, sequenceNumber, sideNumber])
+  @@index([matchResultId, sequenceNumber])
 }
 
 model GameSessionTrustedAdmin {
