@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { ActivityType, Prisma } from "@prisma/client";
 
 import {
   buildSessionVisibilityWhere,
@@ -18,6 +18,7 @@ async function assertGroupExists(groupId: string, db: Prisma.TransactionClient |
     where: { id: groupId },
     select: {
       id: true,
+      activityType: true,
       archivedAt: true,
       trustedAdmins: {
         select: {
@@ -56,12 +57,16 @@ async function assertPlayersExist(playerIds: string[], db: Prisma.TransactionCli
   }
 }
 
-export async function getGameSessions(actor: AuthorizationActor, options?: { includeArchived?: boolean }) {
+export async function getGameSessions(
+  actor: AuthorizationActor,
+  options?: { includeArchived?: boolean; activityType?: ActivityType },
+) {
   const visibilityWhere = buildSessionVisibilityWhere(actor);
 
   return prisma.gameSession.findMany({
     where: {
       ...(options?.includeArchived ? {} : { archivedAt: null }),
+      ...(options?.activityType ? { activityType: options.activityType } : {}),
       ...visibilityWhere,
     },
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
@@ -175,6 +180,11 @@ export async function createGameSession(
 
   if (input.groupId) {
     const group = await assertGroupExists(input.groupId, db);
+
+    if (group.activityType !== input.activityType) {
+      throw new Error("Selected group activity must match the session activity.");
+    }
+
     groupTrustedAdminUserIds = group.trustedAdmins.map((entry) => entry.userId);
   }
 
@@ -199,6 +209,7 @@ export async function createGameSession(
     data: {
       groupId: input.groupId,
       ownerUserId: input.ownerUserId,
+      activityType: input.activityType,
       title: input.title,
       playedAt: input.playedAt,
       notes: input.notes,
@@ -221,7 +232,14 @@ export async function updateGameSession(input: GameSessionUpdateInput, tx?: Pris
     select: {
       id: true,
       groupId: true,
+      activityType: true,
       archivedAt: true,
+      _count: {
+        select: {
+          roundResults: true,
+          matches: true,
+        },
+      },
     },
   });
 
@@ -233,6 +251,10 @@ export async function updateGameSession(input: GameSessionUpdateInput, tx?: Pris
     throw new Error("Archived sessions are read-only. Unarchive the session before editing it.");
   }
 
+  if (existing.activityType !== input.activityType && (existing._count.roundResults > 0 || existing._count.matches > 0)) {
+    throw new Error("Activity cannot be changed after rounds or matches have been recorded for this session.");
+  }
+
   const lockReasons = await getSessionEditLockReasons(input.id, db);
 
   if (lockReasons.groupLocked && existing.groupId !== input.groupId) {
@@ -240,13 +262,18 @@ export async function updateGameSession(input: GameSessionUpdateInput, tx?: Pris
   }
 
   if (input.groupId) {
-    await assertGroupExists(input.groupId, db);
+    const group = await assertGroupExists(input.groupId, db);
+
+    if (group.activityType !== input.activityType) {
+      throw new Error("Selected group activity must match the session activity.");
+    }
   }
 
   return db.gameSession.update({
     where: { id: input.id },
     data: {
       groupId: input.groupId,
+      activityType: input.activityType,
       title: input.title,
       playedAt: input.playedAt,
       notes: input.notes,
@@ -309,13 +336,15 @@ export async function setSessionParticipants(input: SessionParticipantsUpdateInp
     },
   });
 
-  await db.sessionParticipant.createMany({
-    data: participantIds.map((playerId) => ({
-      gameSessionId: input.gameSessionId,
-      playerId,
-    })),
-    skipDuplicates: true,
-  });
+  if (participantIds.length > 0) {
+    await db.sessionParticipant.createMany({
+      data: participantIds.map((playerId) => ({
+        gameSessionId: input.gameSessionId,
+        playerId,
+      })),
+      skipDuplicates: true,
+    });
+  }
 }
 
 export async function setSessionTrustedAdmins(

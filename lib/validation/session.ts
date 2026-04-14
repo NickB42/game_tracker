@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ActivityType } from "@prisma/client";
 
 const optionalTrimmedString = (maxLength: number) =>
   z.preprocess(
@@ -17,7 +18,6 @@ const idSchema = z.string().trim().min(1).max(64);
 
 const participantIdsSchema = z
   .array(idSchema)
-  .min(2, "Select at least 2 participants.")
   .max(300, "Too many participants selected.")
   .refine((ids) => new Set(ids).size === ids.length, "Duplicate participant IDs are not allowed.");
 
@@ -27,6 +27,7 @@ const playedAtSchema = z
   .refine((value) => !Number.isNaN(value.getTime()), "Played at date/time is required.");
 
 export const gameSessionInputSchema = z.object({
+  activityType: z.nativeEnum(ActivityType).default(ActivityType.CARD),
   groupId: idSchema.optional(),
   title: optionalTrimmedString(120),
   playedAt: playedAtSchema,

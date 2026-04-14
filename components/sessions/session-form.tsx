@@ -23,6 +23,7 @@ type SelectableUser = {
 };
 
 type SessionFormDefaults = {
+  activityType?: "CARD" | "SQUASH" | "PADEL";
   groupId?: string | null;
   title?: string | null;
   playedAt?: string;
@@ -82,6 +83,19 @@ export function SessionForm(props: SessionFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-5 p-6">
+      <Field id="activityType" label="Activity" error={state.fieldErrors?.activityType}>
+        <select
+          id="activityType"
+          name="activityType"
+          defaultValue={defaults?.activityType ?? "CARD"}
+          className="app-select"
+        >
+          <option value="CARD">Card</option>
+          <option value="SQUASH">Squash</option>
+          <option value="PADEL">Padel</option>
+        </select>
+      </Field>
+
       <Field id="groupId" label="Group" error={state.fieldErrors?.groupId}>
         <select
           id="groupId"
@@ -164,7 +178,7 @@ export function SessionForm(props: SessionFormProps) {
         ) : null}
       </FormSection>
 
-      <FormSection title="Participants" description="Select the players who actually attended this session. Minimum 2.">
+      <FormSection title="Participants" description="Select the players who attended this session.">
         <div className="max-h-72 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
           {props.selectablePlayers.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No players available yet.</p>

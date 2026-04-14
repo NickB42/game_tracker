@@ -28,6 +28,10 @@ export default async function EditRoundPage({ params }: EditRoundPageProps) {
     notFound();
   }
 
+  if (gameSession.activityType !== "CARD") {
+    notFound();
+  }
+
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between gap-3">
