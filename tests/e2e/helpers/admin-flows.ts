@@ -43,7 +43,7 @@ export async function createSquashMatchViaUI(page: Page, players: [string, strin
   await page.getByLabel("Side 2 score", { exact: true }).fill(String(score[1]));
 
   await page.getByRole("button", { name: "Add match" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/sessions\/.+/);
+  await expect(page).toHaveURL(/\/dashboard\/sessions\/.+\/matches\/new\?saved=1/);
 }
 
 export async function createPadelMatchViaUI(
@@ -69,7 +69,7 @@ export async function createPadelMatchViaUI(
   }
 
   await page.getByRole("button", { name: "Add match" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/sessions\/.+/);
+  await expect(page).toHaveURL(/\/dashboard\/sessions\/.+\/matches\/new\?saved=1/);
 }
 
 export async function createGroupViaUI(page: Page, groupName: string, memberNames?: string[]) {

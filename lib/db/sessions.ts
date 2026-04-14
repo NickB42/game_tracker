@@ -59,7 +59,7 @@ async function assertPlayersExist(playerIds: string[], db: Prisma.TransactionCli
 
 export async function getGameSessions(
   actor: AuthorizationActor,
-  options?: { includeArchived?: boolean; activityType?: ActivityType },
+  options?: { includeArchived?: boolean; activityType?: ActivityType; groupId?: string },
 ) {
   const visibilityWhere = buildSessionVisibilityWhere(actor);
 
@@ -67,6 +67,7 @@ export async function getGameSessions(
     where: {
       ...(options?.includeArchived ? {} : { archivedAt: null }),
       ...(options?.activityType ? { activityType: options.activityType } : {}),
+      ...(options?.groupId ? { groupId: options.groupId } : {}),
       ...visibilityWhere,
     },
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
@@ -102,6 +103,8 @@ export async function getGameSessions(
       _count: {
         select: {
           participants: true,
+          roundResults: true,
+          matches: true,
         },
       },
     },

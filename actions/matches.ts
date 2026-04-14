@@ -154,7 +154,7 @@ export async function createSportsMatchAction(
   }
 
   revalidateSportsSessionPaths(gameSessionId);
-  redirect(`/dashboard/sessions/${gameSessionId}`);
+  redirect(`/dashboard/sessions/${gameSessionId}/matches/new?saved=1`);
 }
 
 export async function updateSportsMatchAction(

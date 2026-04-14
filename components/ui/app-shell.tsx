@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/groups", label: "Groups", icon: <GroupIcon /> },
   { href: "/dashboard/sessions", label: "Sessions", icon: <SessionIcon /> },
   { href: "/dashboard/leaderboards", label: "Leaderboards", icon: <TrophyIcon /> },
-  { href: "/dashboard/online-play", label: "Online Play", icon: <OnlineIcon /> },
+  { href: "/dashboard/online-play", label: "Online Play (Card)", icon: <OnlineIcon /> },
   { href: "/dashboard/settings", label: "Settings", icon: <SettingsIcon /> },
 ];
 
@@ -47,7 +47,7 @@ const MOBILE_TAB_ITEMS: NavItem[] = [
   { href: "/dashboard/groups", label: "Groups", icon: <GroupIcon /> },
   { href: "/dashboard/sessions", label: "Sessions", icon: <SessionIcon /> },
   { href: "/dashboard/leaderboards", label: "Boards", icon: <TrophyIcon /> },
-  { href: "/dashboard/online-play", label: "Online", icon: <OnlineIcon /> },
+  { href: "/dashboard/online-play", label: "Online Card", icon: <OnlineIcon /> },
 ];
 
 function isNavItemActive(pathname: string, href: string) {

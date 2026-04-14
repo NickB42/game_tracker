@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ActivityType } from "@prisma/client";
 
 import { SessionForm } from "@/components/sessions/session-form";
 import { PageHeader } from "@/components/ui/primitives";
@@ -8,9 +9,30 @@ import { canCreateSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
 import { getPlayers } from "@/lib/db/players";
 import { getAssignableUsers } from "@/lib/db/users";
+import { buildSessionsHref, parseSessionsActivityFilter } from "@/lib/sessions/filter-state";
 
-export default async function NewSessionPage() {
+type NewSessionPageProps = {
+  searchParams: Promise<{
+    activity?: string;
+    groupId?: string;
+  }>;
+};
+
+function toActivityType(value: string | undefined): ActivityType | undefined {
+  const parsed = parseSessionsActivityFilter(value);
+
+  if (parsed === "ALL") {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+export default async function NewSessionPage({ searchParams }: NewSessionPageProps) {
   const user = await requireAuthenticatedUser();
+
+  const { activity, groupId } = await searchParams;
+  const selectedActivity = toActivityType(activity);
 
   if (!canCreateSession(user)) {
     redirect("/dashboard/sessions");
@@ -22,13 +44,20 @@ export default async function NewSessionPage() {
     getAssignableUsers(user),
   ]);
 
+  const selectedGroupId = groupId && groups.some((group) => group.id === groupId) ? groupId : undefined;
+
+  const backHref = buildSessionsHref({
+    activity: selectedActivity ?? "ALL",
+    groupId: selectedGroupId,
+  });
+
   return (
     <section className="space-y-5">
       <PageHeader
         title="Create Game Session"
         description="Record when a session was played and who attended."
         actions={
-          <Link className="app-button app-button-ghost" href="/dashboard/sessions">
+          <Link className="app-button app-button-ghost" href={backHref}>
             Back to sessions
           </Link>
         }
@@ -47,6 +76,10 @@ export default async function NewSessionPage() {
           displayName: player.displayName,
           isActive: player.isActive,
         }))}
+        defaultValues={{
+          activityType: selectedActivity,
+          groupId: selectedGroupId,
+        }}
       />
     </section>
   );

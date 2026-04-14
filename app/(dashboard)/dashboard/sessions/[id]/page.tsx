@@ -74,6 +74,9 @@ type GameSessionDetailPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    returnTo?: string;
+  }>;
 };
 
 function formatDateTime(value: Date) {
@@ -83,9 +86,9 @@ function formatDateTime(value: Date) {
   }).format(value);
 }
 
-export default async function GameSessionDetailPage({ params }: GameSessionDetailPageProps) {
+export default async function GameSessionDetailPage({ params, searchParams }: GameSessionDetailPageProps) {
   const user = await requireAuthenticatedUser();
-  const { id } = await params;
+  const [{ id }, { returnTo }] = await Promise.all([params, searchParams]);
 
   const [gameSessionRaw, sessionContext] = await Promise.all([
     getGameSessionById(id, user),
@@ -120,6 +123,22 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
       : [],
   );
 
+  const latestRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+  const latestSportsMatch = sportsMatches.length > 0 ? sportsMatches[sportsMatches.length - 1] : null;
+  const latestResultLabel =
+    gameSession.activityType === "CARD"
+      ? latestRound
+        ? `Round #${latestRound.sequenceNumber}`
+        : "No rounds yet"
+      : latestSportsMatch
+        ? `Match #${latestSportsMatch.sequenceNumber}`
+        : "No matches yet";
+  const decodedReturnTo = returnTo ? decodeURIComponent(returnTo) : "";
+  const sessionsBackHref = decodedReturnTo.startsWith("/dashboard/sessions")
+    ? decodedReturnTo
+    : `/dashboard/sessions?activity=${gameSession.activityType}`;
+  const leaderboardHref = `/dashboard/leaderboards/global?activity=${gameSession.activityType}`;
+
   return (
     <section className="space-y-6">
       <PageHeader
@@ -136,10 +155,10 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
         }
         actions={
           <>
-            <AppButton href="/dashboard/sessions" variant="ghost">
+            <AppButton href={sessionsBackHref} variant="ghost">
               Back to Sessions
             </AppButton>
-            <AppButton href="/dashboard/leaderboards/global" variant="secondary">
+            <AppButton href={leaderboardHref} variant="secondary">
               Global Leaderboard
             </AppButton>
             {canManageSession ? (
@@ -177,6 +196,7 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
             tone={sportsMatches.length > 0 ? "success" : "default"}
           />
         )}
+        <StatCard label="Latest result" value={latestResultLabel} tone="default" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -205,7 +225,7 @@ export default async function GameSessionDetailPage({ params }: GameSessionDetai
           <h3 className="app-section-title text-base">Session summary</h3>
           {gameSession.activityType !== "CARD" ? (
             <p className="mt-3 text-sm text-[var(--text-secondary)]">
-              Sports sessions track manual matches. Leaderboards and ratings for sports will be enabled in a later phase.
+              Sports sessions track manual matches with activity-specific leaderboards and ratings.
             </p>
           ) : summary && summary.participants.length > 0 ? (
             <div className="mt-3">

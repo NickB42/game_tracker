@@ -7,10 +7,12 @@ import type { LeaderboardRow } from "@/lib/db/leaderboards";
 type LeaderboardTableProps = {
   rows: LeaderboardRow[];
   activityType: ActivityType;
+  scopeLabel?: string;
 };
 
-export function LeaderboardTable({ rows, activityType }: LeaderboardTableProps) {
+export function LeaderboardTable({ rows, activityType, scopeLabel }: LeaderboardTableProps) {
   const isCard = activityType === "CARD";
+  const scopePrefix = scopeLabel ? `${scopeLabel}: ` : "";
 
   if (rows.length === 0) {
     return (
@@ -18,8 +20,8 @@ export function LeaderboardTable({ rows, activityType }: LeaderboardTableProps) 
         title={isCard ? "No rounds recorded yet" : "No matches recorded yet"}
         description={
           isCard
-            ? "Complete a round in any card session to generate rating updates and leaderboard standings."
-            : "Complete a sports match in this activity to generate Elo updates and leaderboard standings."
+            ? `${scopePrefix}complete a round in a card session to generate rating updates and leaderboard standings.`
+            : `${scopePrefix}complete a sports match in this activity to generate Elo updates and leaderboard standings.`
         }
         data-testid="leaderboard-empty-state"
       />

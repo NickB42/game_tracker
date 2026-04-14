@@ -41,6 +41,9 @@ export default async function NewGroupPage() {
           displayName: player.displayName,
           isActive: player.isActive,
         }))}
+        defaultValues={{
+          activityType: "CARD",
+        }}
       />
     </section>
   );

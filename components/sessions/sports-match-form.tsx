@@ -266,7 +266,7 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
         disabled={isPending}
         className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? "Saving..." : props.mode === "edit" ? "Save match" : "Add match"}
+        {isPending ? "Saving..." : props.mode === "edit" ? "Save match" : "Add match and keep entering"}
       </button>
     </form>
   );

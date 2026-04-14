@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { AppButton, DataTable, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateGroup, canEditGroup } from "@/lib/domain/authorization";
@@ -29,6 +30,7 @@ export default async function GroupsPage() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Activity</th>
                 <th>Members</th>
                 <th>Sessions</th>
                 <th>Actions</th>
@@ -38,6 +40,9 @@ export default async function GroupsPage() {
               {groups.map((group) => (
                 <tr key={group.id}>
                   <td className="font-medium text-[var(--text-primary)]">{group.name}</td>
+                  <td>
+                    <ActivityBadge activityType={group.activityType} />
+                  </td>
                   <td>{group._count.memberships}</td>
                   <td>{group._count.gameSessions}</td>
                   <td>

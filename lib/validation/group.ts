@@ -15,8 +15,10 @@ const optionalTrimmedString = (maxLength: number) =>
 
 const playerIdSchema = z.string().trim().min(1).max(64);
 const userIdSchema = z.string().trim().min(1).max(64);
+const activityTypeSchema = z.enum(["CARD", "SQUASH", "PADEL"]);
 
 export const groupInputSchema = z.object({
+  activityType: activityTypeSchema,
   name: z
     .string()
     .trim()

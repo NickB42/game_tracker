@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ActivityType } from "@prisma/client";
 
+import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
 import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -29,7 +30,12 @@ export default async function GlobalLeaderboardPage({ searchParams }: GlobalLead
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Global leaderboard"
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            <span>Global leaderboard</span>
+            <ActivityBadge activityType={leaderboard.activityType} />
+          </span>
+        }
         description={
           activityType === "CARD"
             ? "OpenSkill ratings replayed from ranked card round finishes."
@@ -59,7 +65,7 @@ export default async function GlobalLeaderboardPage({ searchParams }: GlobalLead
         ))}
       </div>
 
-      <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} />
+      <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} scopeLabel="Global scope" />
     </section>
   );
 }

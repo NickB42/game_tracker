@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ActivityType } from "@prisma/client";
 
+import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
 import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -50,7 +51,12 @@ export default async function GroupLeaderboardPage({ params, searchParams }: Gro
   return (
     <section className="space-y-6">
       <PageHeader
-        title={`Group leaderboard: ${group.name}`}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{`Group leaderboard: ${group.name}`}</span>
+            <ActivityBadge activityType={activityType} />
+          </span>
+        }
         description={`Scoped to ${activityType.toLowerCase()} sessions historically linked to this group.`}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -80,7 +86,7 @@ export default async function GroupLeaderboardPage({ params, searchParams }: Gro
         ))}
       </div>
 
-      <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} />
+      <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} scopeLabel={`Group ${group.name}`} />
     </section>
   );
 }
