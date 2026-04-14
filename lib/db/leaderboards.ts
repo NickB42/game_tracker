@@ -1,6 +1,10 @@
+import type { ActivityType } from "@prisma/client";
+
 import { prisma } from "@/lib/db/prisma";
 import { buildGroupVisibilityWhere, type AuthorizationActor } from "@/lib/domain/authorization";
-import { computeRatingsFromRoundHistory, type RatingRoundEvent } from "@/lib/rating/openskill";
+import type { EloMatchEvent } from "@/lib/rating/elo";
+import type { RatingRoundEvent } from "@/lib/rating/openskill";
+import { computeActivityRatings, getRatingSystemForActivity, type RatingSystem } from "@/lib/rating/strategy";
 
 export type LeaderboardRow = {
   playerId: string;
@@ -11,7 +15,14 @@ export type LeaderboardRow = {
   roundWins: number;
   matchWins: number;
   roundsPlayed: number;
+  matchesPlayed: number;
   sessionsPlayed: number;
+};
+
+export type ActivityLeaderboard = {
+  activityType: ActivityType;
+  ratingSystem: RatingSystem;
+  rows: LeaderboardRow[];
 };
 
 type MutableLeaderboardStats = {
@@ -20,22 +31,39 @@ type MutableLeaderboardStats = {
   roundWins: number;
   matchWins: number;
   roundsPlayed: number;
+  matchesPlayed: number;
   sessionsPlayed: Set<string>;
 };
 
 type GroupFilter = {
   groupId?: string;
+  activityType: ActivityType;
 };
+
+export function buildCardRoundHistoryWhere(filter: GroupFilter) {
+  return {
+    archivedAt: null,
+    gameSession: {
+      archivedAt: null,
+      activityType: filter.activityType,
+      ...(filter.groupId ? { groupId: filter.groupId } : {}),
+    },
+  } as const;
+}
+
+export function buildSportsMatchHistoryWhere(filter: GroupFilter) {
+  return {
+    gameSession: {
+      archivedAt: null,
+      activityType: filter.activityType,
+      ...(filter.groupId ? { groupId: filter.groupId } : {}),
+    },
+  } as const;
+}
 
 async function getRoundHistory(filter?: GroupFilter) {
   return prisma.roundResult.findMany({
-    where: {
-      archivedAt: null,
-      gameSession: {
-        archivedAt: null,
-        ...(filter?.groupId ? { groupId: filter.groupId } : {}),
-      },
-    },
+    where: buildCardRoundHistoryWhere(filter ?? { activityType: "CARD" }),
     include: {
       gameSession: {
         select: {
@@ -64,6 +92,37 @@ async function getRoundHistory(filter?: GroupFilter) {
   });
 }
 
+async function getSportsMatchHistory(filter: GroupFilter) {
+  return prisma.match.findMany({
+    where: buildSportsMatchHistoryWhere(filter),
+    include: {
+      gameSession: {
+        select: {
+          id: true,
+          playedAt: true,
+        },
+      },
+      participants: {
+        orderBy: [{ sideNumber: "asc" }, { seatOrder: "asc" }, { createdAt: "asc" }],
+        include: {
+          player: {
+            select: {
+              id: true,
+              displayName: true,
+            },
+          },
+        },
+      },
+      result: {
+        select: {
+          winningSideNumber: true,
+        },
+      },
+    },
+    orderBy: [{ gameSession: { playedAt: "asc" } }, { sequenceNumber: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+  });
+}
+
 function getOrCreateStats(
   statsByPlayerId: Map<string, MutableLeaderboardStats>,
   player: { id: string; displayName: string },
@@ -80,6 +139,7 @@ function getOrCreateStats(
     roundWins: 0,
     matchWins: 0,
     roundsPlayed: 0,
+    matchesPlayed: 0,
     sessionsPlayed: new Set<string>(),
   };
 
@@ -116,7 +176,54 @@ function computeDerivedMatchWins(
   }
 }
 
-async function buildLeaderboard(filter?: GroupFilter): Promise<LeaderboardRow[]> {
+function buildRows(
+  activityType: ActivityType,
+  statsByPlayerId: Map<string, MutableLeaderboardStats>,
+  ratingEvents: {
+    cardEvents: RatingRoundEvent[];
+    sportsEvents: EloMatchEvent[];
+  },
+): LeaderboardRow[] {
+  const ratingByPlayerId = computeActivityRatings(activityType, ratingEvents);
+  const rows: LeaderboardRow[] = [];
+
+  for (const stats of statsByPlayerId.values()) {
+    const rating = ratingByPlayerId.get(stats.playerId);
+
+    rows.push({
+      playerId: stats.playerId,
+      playerDisplayName: stats.playerDisplayName,
+      displayedRating: rating?.ordinal ?? 0,
+      mu: rating?.mu ?? 0,
+      sigma: rating?.sigma ?? 0,
+      roundWins: stats.roundWins,
+      matchWins: stats.matchWins,
+      roundsPlayed: stats.roundsPlayed,
+      matchesPlayed: stats.matchesPlayed,
+      sessionsPlayed: stats.sessionsPlayed.size,
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (b.displayedRating !== a.displayedRating) {
+      return b.displayedRating - a.displayedRating;
+    }
+
+    if (b.matchWins !== a.matchWins) {
+      return b.matchWins - a.matchWins;
+    }
+
+    if (b.roundWins !== a.roundWins) {
+      return b.roundWins - a.roundWins;
+    }
+
+    return a.playerDisplayName.localeCompare(b.playerDisplayName);
+  });
+
+  return rows;
+}
+
+async function buildCardLeaderboard(filter: GroupFilter): Promise<LeaderboardRow[]> {
   const rounds = await getRoundHistory(filter);
 
   if (rounds.length === 0) {
@@ -163,46 +270,80 @@ async function buildLeaderboard(filter?: GroupFilter): Promise<LeaderboardRow[]>
 
   computeDerivedMatchWins(sessionRoundWins, statsByPlayerId);
 
-  const ratingByPlayerId = computeRatingsFromRoundHistory(ratingEvents);
+  return buildRows("CARD", statsByPlayerId, {
+    cardEvents: ratingEvents,
+    sportsEvents: [],
+  });
+}
 
-  const rows: LeaderboardRow[] = [];
+async function buildSportsLeaderboard(filter: GroupFilter): Promise<LeaderboardRow[]> {
+  const matches = await getSportsMatchHistory(filter);
 
-  for (const stats of statsByPlayerId.values()) {
-    const rating = ratingByPlayerId.get(stats.playerId);
+  if (matches.length === 0) {
+    return [];
+  }
 
-    rows.push({
-      playerId: stats.playerId,
-      playerDisplayName: stats.playerDisplayName,
-      displayedRating: rating?.ordinal ?? 0,
-      mu: rating?.mu ?? 0,
-      sigma: rating?.sigma ?? 0,
-      roundWins: stats.roundWins,
-      matchWins: stats.matchWins,
-      roundsPlayed: stats.roundsPlayed,
-      sessionsPlayed: stats.sessionsPlayed.size,
+  const statsByPlayerId = new Map<string, MutableLeaderboardStats>();
+  const ratingEvents: EloMatchEvent[] = [];
+
+  for (const match of matches) {
+    if (!match.result?.winningSideNumber || (match.result.winningSideNumber !== 1 && match.result.winningSideNumber !== 2)) {
+      continue;
+    }
+
+    for (const participant of match.participants) {
+      const stats = getOrCreateStats(statsByPlayerId, participant.player);
+      stats.matchesPlayed += 1;
+      stats.sessionsPlayed.add(match.gameSession.id);
+
+      if (participant.sideNumber === match.result.winningSideNumber) {
+        stats.matchWins += 1;
+      }
+    }
+
+    ratingEvents.push({
+      playedAt: match.gameSession.playedAt,
+      sequenceNumber: match.sequenceNumber,
+      winningSideNumber: match.result.winningSideNumber,
+      participants: match.participants
+        .filter((participant) => participant.sideNumber === 1 || participant.sideNumber === 2)
+        .map((participant) => ({
+          playerId: participant.player.id,
+          sideNumber: participant.sideNumber as 1 | 2,
+        })),
     });
   }
 
-  rows.sort((a, b) => {
-    if (b.displayedRating !== a.displayedRating) {
-      return b.displayedRating - a.displayedRating;
-    }
-
-    if (b.roundWins !== a.roundWins) {
-      return b.roundWins - a.roundWins;
-    }
-
-    return a.playerDisplayName.localeCompare(b.playerDisplayName);
+  return buildRows(filter.activityType, statsByPlayerId, {
+    cardEvents: [],
+    sportsEvents: ratingEvents,
   });
-
-  return rows;
 }
 
-export async function getGlobalLeaderboard(): Promise<LeaderboardRow[]> {
-  return buildLeaderboard();
+async function buildLeaderboard(filter: GroupFilter): Promise<ActivityLeaderboard> {
+  const rows =
+    filter.activityType === "CARD"
+      ? await buildCardLeaderboard(filter)
+      : await buildSportsLeaderboard(filter);
+
+  return {
+    activityType: filter.activityType,
+    ratingSystem: getRatingSystemForActivity(filter.activityType),
+    rows,
+  };
 }
 
-export async function getGroupLeaderboard(groupId: string, actor: AuthorizationActor): Promise<LeaderboardRow[] | null> {
+export async function getGlobalLeaderboard(options?: { activityType?: ActivityType }): Promise<ActivityLeaderboard> {
+  return buildLeaderboard({
+    activityType: options?.activityType ?? "CARD",
+  });
+}
+
+export async function getGroupLeaderboard(
+  groupId: string,
+  actor: AuthorizationActor,
+  options?: { activityType?: ActivityType },
+): Promise<ActivityLeaderboard | null> {
   const visibleGroup = await prisma.group.findFirst({
     where: {
       id: groupId,
@@ -210,6 +351,7 @@ export async function getGroupLeaderboard(groupId: string, actor: AuthorizationA
     },
     select: {
       id: true,
+      activityType: true,
     },
   });
 
@@ -217,5 +359,15 @@ export async function getGroupLeaderboard(groupId: string, actor: AuthorizationA
     return null;
   }
 
-  return buildLeaderboard({ groupId });
+  const activityType = options?.activityType ?? visibleGroup.activityType;
+
+  if (activityType !== visibleGroup.activityType) {
+    return {
+      activityType,
+      ratingSystem: getRatingSystemForActivity(activityType),
+      rows: [],
+    };
+  }
+
+  return buildLeaderboard({ groupId, activityType });
 }
