@@ -237,6 +237,8 @@ npm run build:deploy
 
 This build path runs Prisma client generation, applies migrations safely with `prisma migrate deploy`, and then builds the Next.js app.
 
+`build:deploy` now includes retry/backoff for transient Prisma advisory lock contention (for example, concurrent preview builds).
+
 ### 3. Connect a managed Postgres database
 
 Use either:
@@ -280,6 +282,12 @@ Preview deployments are supported, but keep them isolated:
 1. Set preview-specific env vars in Vercel's **Preview** scope.
 2. Prefer a separate preview database (or branches) so preview changes do not affect production data.
 3. Do not reuse production secrets unless intended and safe.
+
+If preview builds share a database and you want to avoid migration lock contention, set:
+
+- `SKIP_PRISMA_MIGRATE_DEPLOY=true` (Preview scope only)
+
+Then run migrations in a single controlled environment (for example production deploy or dedicated migration job).
 
 Better Auth setup in this repo is deployment-safe for previews:
 
