@@ -7,7 +7,7 @@ test("@smoke global leaderboard page loads", async ({ page }: { page: Page }) =>
 
   await page.goto("/dashboard/leaderboards/global?activity=CARD");
   await expect(page.getByTestId("global-leaderboard-heading")).toBeVisible();
-  await expect(page.getByText("Card", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Card", exact: true })).toBeVisible();
 
   const emptyState = page.getByTestId("leaderboard-empty-state");
   const table = page.getByTestId("leaderboard-table");

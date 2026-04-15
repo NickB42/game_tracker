@@ -35,11 +35,15 @@ test("@smoke session detail activity context visibility", async ({ page, makeNam
 
   const p1 = makeName("E2E Detail P1");
   const p2 = makeName("E2E Detail P2");
+  const p3 = makeName("E2E Detail P3");
+  const p4 = makeName("E2E Detail P4");
   const sessionTitle = makeName("E2E Detail Session");
 
   await createPlayerViaUI(page, p1);
   await createPlayerViaUI(page, p2);
-  await createSessionViaUI(page, sessionTitle, [p1, p2], { activityType: "PADEL" });
+  await createPlayerViaUI(page, p3);
+  await createPlayerViaUI(page, p4);
+  await createSessionViaUI(page, sessionTitle, [p1, p2, p3, p4], { activityType: "PADEL" });
 
   await expect(page.getByText("Recorded matches")).toBeVisible();
   await expect(page.getByRole("link", { name: "Global Leaderboard" })).toHaveAttribute("href", /activity=PADEL/);

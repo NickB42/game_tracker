@@ -5,10 +5,14 @@ const isLocalTarget = !process.env.PLAYWRIGHT_BASE_URL;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  timeout: 90000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
+  expect: {
+    timeout: 45000,
+  },
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,

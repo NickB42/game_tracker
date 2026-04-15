@@ -68,7 +68,7 @@ test("only legal cards can be dragged and only on active turn", () => {
   assert.equal(
     canDragCard({
       cardId: "c1",
-      isMyTurn: true,
+      canPlayNow: true,
       isSubmitting: false,
       selectedCardIds: ["c1", "c2"],
       legalPlayKeys,
@@ -80,7 +80,7 @@ test("only legal cards can be dragged and only on active turn", () => {
   assert.equal(
     canDragCard({
       cardId: "c3",
-      isMyTurn: true,
+      canPlayNow: true,
       isSubmitting: false,
       selectedCardIds: [],
       legalPlayKeys,
@@ -92,7 +92,7 @@ test("only legal cards can be dragged and only on active turn", () => {
   assert.equal(
     canDragCard({
       cardId: "c1",
-      isMyTurn: false,
+      canPlayNow: false,
       isSubmitting: false,
       selectedCardIds: [],
       legalPlayKeys,

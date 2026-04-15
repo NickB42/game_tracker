@@ -1,8 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function createPlayerViaUI(page: Page, displayName: string) {
-  await page.goto("/dashboard/players");
-  await page.getByTestId("players-new-link").click();
+  await page.goto("/dashboard/players/new");
 
   await page.getByTestId("player-display-name-input").fill(displayName);
   await page.getByTestId("player-submit-button").click();
@@ -34,7 +33,7 @@ export async function createSessionViaUI(
 }
 
 export async function createSquashMatchViaUI(page: Page, players: [string, string], score: [number, number]) {
-  await page.getByRole("link", { name: "Add Match" }).click();
+  await page.getByTestId("session-add-match-link").click();
   await expect(page).toHaveURL(/\/dashboard\/sessions\/.+\/matches\/new/);
 
   await page.getByLabel("Side 1 player", { exact: true }).selectOption({ label: players[0] });
@@ -52,7 +51,7 @@ export async function createPadelMatchViaUI(
   sideTwoPlayers: [string, string],
   setScores: Array<[number, number]>,
 ) {
-  await page.getByRole("link", { name: "Add Match" }).click();
+  await page.getByTestId("session-add-match-link").click();
   await expect(page).toHaveURL(/\/dashboard\/sessions\/.+\/matches\/new/);
 
   await page.getByLabel("Side 1 player 1", { exact: true }).selectOption({ label: sideOnePlayers[0] });

@@ -133,7 +133,16 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
       : latestSportsMatch
         ? `Match #${latestSportsMatch.sequenceNumber}`
         : "No matches yet";
-  const decodedReturnTo = returnTo ? decodeURIComponent(returnTo) : "";
+  let decodedReturnTo = "";
+
+  if (returnTo) {
+    try {
+      decodedReturnTo = decodeURIComponent(returnTo);
+    } catch {
+      decodedReturnTo = "";
+    }
+  }
+
   const sessionsBackHref = decodedReturnTo.startsWith("/dashboard/sessions")
     ? decodedReturnTo
     : `/dashboard/sessions?activity=${gameSession.activityType}`;
@@ -148,6 +157,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
             <ActivityBadge activityType={gameSession.activityType} />
           </span>
         }
+        data-testid="session-detail-heading"
         description={
           gameSession.activityType === "CARD"
             ? "One session is one game night; rounds capture each short game in order."
@@ -171,7 +181,9 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
                     Add Round
                   </AppButton>
                 ) : (
-                  <AppButton href={`/dashboard/sessions/${gameSession.id}/matches/new`}>Add Match</AppButton>
+                  <AppButton href={`/dashboard/sessions/${gameSession.id}/matches/new`} data-testid="session-add-match-link">
+                    Add Match
+                  </AppButton>
                 )}
               </>
             ) : null}

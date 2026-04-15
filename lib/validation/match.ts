@@ -64,7 +64,7 @@ export const sportsMatchBaseInputSchema = z
     sideTwoSessionParticipantIds: z.array(idSchema).max(2, "Too many participants selected for side 2."),
     squashScoreSideOne: scoreSchema.optional(),
     squashScoreSideTwo: scoreSchema.optional(),
-    padelSets: z.array(padelSetSchema).max(3, "A maximum of 3 sets is allowed. ").default([]),
+    padelSets: z.array(padelSetSchema).max(3, "A maximum of 3 sets is allowed.").default([]),
     notes: optionalTrimmedString(1000),
   })
   .superRefine((value, ctx) => {
