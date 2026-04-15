@@ -13,6 +13,7 @@ export default async function AdminUsersPage() {
       <PageHeader
         title="User management"
         description="Admin-only account management for this private invite-only app."
+        data-testid="admin-users-heading"
         actions={<AppButton href="/dashboard/admin/users/new">New user</AppButton>}
       />
 

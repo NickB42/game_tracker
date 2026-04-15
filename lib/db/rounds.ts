@@ -8,6 +8,7 @@ async function assertGameSessionExists(gameSessionId: string, db: Prisma.Transac
     where: { id: gameSessionId },
     select: {
       id: true,
+      activityType: true,
       archivedAt: true,
     },
   });
@@ -18,6 +19,10 @@ async function assertGameSessionExists(gameSessionId: string, db: Prisma.Transac
 
   if (gameSession.archivedAt) {
     throw new Error("Cannot record rounds for an archived session.");
+  }
+
+  if (gameSession.activityType !== "CARD") {
+    throw new Error("Rounds are only available for CARD sessions.");
   }
 }
 

@@ -16,7 +16,7 @@ export default async function OnlinePlayPage() {
     <section className="space-y-6" data-testid="online-play-page">
       <PageHeader
         title="Online Play"
-        description="Create and join private Shithead lobbies with reconnect support and live state sync."
+        description="Card-only online mode: create and join private Shithead lobbies with reconnect support and live state sync."
         actions={<StatusBadge tone="accent">{lobbies.length} Open</StatusBadge>}
       />
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { AppButton, Divider, EmptyState, InfoRow, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditGroup } from "@/lib/domain/authorization";
@@ -24,6 +25,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
   const groupRecord = group as unknown as {
     id: string;
     name: string;
+    activityType: "CARD" | "SQUASH" | "PADEL";
     description: string | null;
     ownerUserId: string;
     owner: { name: string };
@@ -58,6 +60,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
       <div className="grid gap-3 md:grid-cols-4">
         <StatCard label="Owner" value={groupRecord.owner.name} tone="accent" />
+        <StatCard label="Activity" value={groupRecord.activityType} tone="accent" />
         <StatCard label="Members" value={groupRecord.memberships.length} />
         <StatCard label="Trusted admins" value={groupRecord.trustedAdmins.length} tone="warning" />
         <StatCard label="Sessions" value={groupRecord._count.gameSessions} />
@@ -66,6 +69,8 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
       <SectionCard title="Group summary">
         <dl className="rounded-[var(--radius-md)] border border-[var(--border)]">
           <InfoRow label="Owner" value={groupRecord.owner.name} />
+          <Divider />
+          <InfoRow label="Activity" value={<ActivityBadge activityType={groupRecord.activityType} />} />
           <Divider />
           <InfoRow label="Description" value={groupRecord.description ?? "No description"} />
         </dl>

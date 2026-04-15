@@ -19,6 +19,7 @@ import { gameSessionInputSchema, gameSessionUpdateInputSchema } from "@/lib/vali
 export type SessionFormState = {
   message?: string;
   fieldErrors?: {
+    activityType?: string;
     groupId?: string;
     title?: string;
     playedAt?: string;
@@ -65,6 +66,7 @@ export async function createGameSessionAction(_prevState: SessionFormState, form
   }
 
   const parsed = gameSessionInputSchema.safeParse({
+    activityType: parseOptionalString(formData, "activityType"),
     groupId: parseOptionalString(formData, "groupId"),
     title: formData.get("title"),
     playedAt: formData.get("playedAt"),
@@ -77,6 +79,7 @@ export async function createGameSessionAction(_prevState: SessionFormState, form
     const fieldErrors = parsed.error.flatten().fieldErrors;
     return {
       fieldErrors: {
+        activityType: fieldErrors.activityType?.[0],
         groupId: fieldErrors.groupId?.[0],
         title: fieldErrors.title?.[0],
         playedAt: fieldErrors.playedAt?.[0],
@@ -143,6 +146,7 @@ export async function updateGameSessionAction(
 
   const parsed = gameSessionUpdateInputSchema.safeParse({
     id: gameSessionId,
+    activityType: parseOptionalString(formData, "activityType"),
     groupId: parseOptionalString(formData, "groupId"),
     title: formData.get("title"),
     playedAt: formData.get("playedAt"),
@@ -155,6 +159,7 @@ export async function updateGameSessionAction(
     const fieldErrors = parsed.error.flatten().fieldErrors;
     return {
       fieldErrors: {
+        activityType: fieldErrors.activityType?.[0],
         groupId: fieldErrors.groupId?.[0],
         title: fieldErrors.title?.[0],
         playedAt: fieldErrors.playedAt?.[0],

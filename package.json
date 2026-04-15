@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:with-migrate": "prisma migrate deploy && next dev",
     "build": "next build",
-    "build:deploy": "prisma generate && prisma migrate deploy && next build",
+    "build:deploy": "bash ./scripts/build-deploy.sh",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",

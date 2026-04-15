@@ -44,7 +44,7 @@ export default async function DashboardPage() {
         <SectionCard
           title="Quick Actions"
           description="Jump directly to the core modules."
-          actions={<AppButton href="/dashboard/online-play">Open Online Play</AppButton>}
+          actions={<AppButton href="/dashboard/online-play">Open Online Card Play</AppButton>}
         >
           <div className="grid gap-2 sm:grid-cols-2">
             <AppButton href="/dashboard/players" variant="secondary" className="justify-start">

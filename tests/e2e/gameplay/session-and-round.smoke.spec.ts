@@ -35,4 +35,8 @@ test("@smoke admin records one ranked round", async ({ page, makeName }: { page:
 
   await expect(page).toHaveURL(/\/dashboard\/sessions\/.+/);
   await expect(page.getByTestId("session-rounds-section")).toContainText("Round #1");
+
+  await page.goto("/dashboard/leaderboards/global?activity=CARD");
+  await expect(page.getByTestId("leaderboard-table")).toContainText(playerOne);
+  await expect(page.getByTestId("leaderboard-table")).toContainText(playerTwo);
 });

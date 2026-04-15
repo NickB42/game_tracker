@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ActivityType } from "@prisma/client";
 
 const optionalTrimmedString = (maxLength: number) =>
   z.preprocess(
@@ -15,8 +16,10 @@ const optionalTrimmedString = (maxLength: number) =>
 
 const playerIdSchema = z.string().trim().min(1).max(64);
 const userIdSchema = z.string().trim().min(1).max(64);
+const activityTypeSchema = z.nativeEnum(ActivityType);
 
 export const groupInputSchema = z.object({
+  activityType: activityTypeSchema,
   name: z
     .string()
     .trim()

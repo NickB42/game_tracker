@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ActivityType } from "@prisma/client";
 
+import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
 import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -11,12 +13,24 @@ type GroupLeaderboardPageProps = {
   params: Promise<{
     groupId: string;
   }>;
+  searchParams: Promise<{
+    activity?: string;
+  }>;
 };
 
-export default async function GroupLeaderboardPage({ params }: GroupLeaderboardPageProps) {
+function parseActivity(value: string | undefined): ActivityType | undefined {
+  if (value === "CARD" || value === "SQUASH" || value === "PADEL") {
+    return value;
+  }
+
+  return undefined;
+}
+
+export default async function GroupLeaderboardPage({ params, searchParams }: GroupLeaderboardPageProps) {
   const user = await requireAuthenticatedUser();
 
-  const { groupId } = await params;
+  const [{ groupId }, { activity }] = await Promise.all([params, searchParams]);
+  const selectedActivity = parseActivity(activity);
 
   const group = await getGroupById(groupId, user);
 
@@ -24,17 +38,26 @@ export default async function GroupLeaderboardPage({ params }: GroupLeaderboardP
     notFound();
   }
 
-  const rows = await getGroupLeaderboard(group.id, user);
+  const leaderboard = await getGroupLeaderboard(group.id, user, {
+    activityType: selectedActivity,
+  });
 
-  if (!rows) {
+  if (!leaderboard) {
     notFound();
   }
+
+  const activityType = leaderboard.activityType;
 
   return (
     <section className="space-y-6">
       <PageHeader
-        title={`Group leaderboard: ${group.name}`}
-        description="Ratings and derived wins computed only from sessions historically linked to this group."
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{`Group leaderboard: ${group.name}`}</span>
+            <ActivityBadge activityType={activityType} />
+          </span>
+        }
+        description={`Scoped to ${activityType.toLowerCase()} sessions historically linked to this group.`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link className="app-button app-button-secondary" href="/dashboard/leaderboards">
@@ -47,7 +70,23 @@ export default async function GroupLeaderboardPage({ params }: GroupLeaderboardP
         }
       />
 
-      <LeaderboardTable rows={rows} />
+      <div className="flex flex-wrap gap-2">
+        {[
+          { value: "CARD", label: "Card" },
+          { value: "SQUASH", label: "Squash" },
+          { value: "PADEL", label: "Padel" },
+        ].map((entry) => (
+          <Link
+            key={entry.value}
+            href={`/dashboard/leaderboards/groups/${group.id}?activity=${entry.value}`}
+            className={`app-button ${activityType === entry.value ? "app-button-primary" : "app-button-ghost"}`}
+          >
+            {entry.label}
+          </Link>
+        ))}
+      </div>
+
+      <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} scopeLabel={`Group ${group.name}`} />
     </section>
   );
 }

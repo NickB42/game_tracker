@@ -12,6 +12,7 @@ import { getAssignableUsers } from "@/lib/db/users";
 
 type SessionEditView = {
   id: string;
+  activityType: "CARD" | "SQUASH" | "PADEL";
   groupId: string | null;
   title: string | null;
   playedAt: Date;
@@ -71,6 +72,7 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
           isActive: player.isActive,
         }))}
         defaultValues={{
+          activityType: gameSession.activityType,
           groupId: gameSession.groupId,
           title: gameSession.title,
           playedAt: gameSession.playedAt.toISOString(),
