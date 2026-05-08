@@ -346,6 +346,7 @@ model OnlineGame {
   privateStateJson      Json
   eliminationOrderJson  Json
   loserUserId           String?
+  winnerUserId          String?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 

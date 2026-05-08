@@ -809,6 +809,7 @@ export async function applyOnlineMove(userId: string, lobbyId: string, move: Pla
         discardPileState: toJson(envelope.game.discardPile),
         eliminationOrderJson: toJson(envelope.game.eliminationOrder),
         loserUserId: envelope.game.loserUserId,
+        winnerUserId: envelope.game.phase === "finished" ? getWinnerUserIdFromEnvelope(envelope) : null,
         currentTurnPlayerId: currentPlayer?.userId ?? null,
         status: envelope.game.phase === "finished" ? "FINISHED" : "IN_PROGRESS",
         finishedAt: envelope.game.phase === "finished" ? now() : null,
@@ -910,7 +911,7 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
     orderBy: { createdAt: "desc" },
     take: 200,
     select: {
-      privateStateJson: true,
+      winnerUserId: true,
     },
   });
 
@@ -919,7 +920,7 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
   let lastWinnerUserId: string | null = null;
 
   for (const [index, game] of finishedGames.entries()) {
-    const winnerUserId = getWinnerUserIdFromEnvelope(getEnvelope(game.privateStateJson));
+    const winnerUserId = game.winnerUserId;
 
     if (!winnerUserId) {
       continue;
