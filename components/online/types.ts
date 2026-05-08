@@ -38,6 +38,8 @@ export type LobbySnapshot = {
         resetByTwo: boolean;
       };
       burnedCardsCount?: number;
+      burnedPileCount?: number;
+      lastBurnedPile?: Array<{ id: string; rank: string; suit: string }> | null;
       burnedPileHistory?: Array<Array<{ id: string; rank: string; suit: string }>>;
       eliminationOrder?: string[];
       legalMoves: Array<
