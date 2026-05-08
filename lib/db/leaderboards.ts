@@ -6,6 +6,14 @@ import type { EloMatchEvent } from "@/lib/rating/elo";
 import type { RatingRoundEvent } from "@/lib/rating/openskill";
 import { computeActivityRatings, getRatingSystemForActivity, type RatingSystem } from "@/lib/rating/strategy";
 
+const LEADERBOARD_HISTORY_MONTHS = 12;
+
+function getLeaderboardCutoffDate(): Date {
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - LEADERBOARD_HISTORY_MONTHS);
+  return cutoff;
+}
+
 export type LeaderboardRow = {
   playerId: string;
   playerDisplayName: string;
@@ -46,6 +54,7 @@ export function buildCardRoundHistoryWhere(filter: GroupFilter) {
     gameSession: {
       archivedAt: null,
       activityType: filter.activityType,
+      playedAt: { gte: getLeaderboardCutoffDate() },
       ...(filter.groupId ? { groupId: filter.groupId } : {}),
     },
   } as const;
@@ -56,6 +65,7 @@ export function buildSportsMatchHistoryWhere(filter: GroupFilter) {
     gameSession: {
       archivedAt: null,
       activityType: filter.activityType,
+      playedAt: { gte: getLeaderboardCutoffDate() },
       ...(filter.groupId ? { groupId: filter.groupId } : {}),
     },
   } as const;
