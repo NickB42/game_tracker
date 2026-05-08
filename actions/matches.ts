@@ -90,6 +90,8 @@ function parsePadelSets(formData: FormData): Array<{ sideOneGames: number; sideT
 function revalidateSportsSessionPaths(gameSessionId: string) {
   revalidatePath("/dashboard/sessions");
   revalidatePath(`/dashboard/sessions/${gameSessionId}`);
+  revalidatePath("/dashboard/leaderboards/global");
+  revalidatePath("/dashboard/leaderboards");
 }
 
 export async function createSportsMatchAction(

@@ -207,5 +207,7 @@ export async function updateGroupAction(
 
   revalidatePath("/dashboard/groups");
   revalidatePath(`/dashboard/groups/${groupIdFromUpdate}`);
+  revalidatePath("/dashboard/sessions");
+  revalidatePath(`/dashboard/leaderboards/groups/${groupIdFromUpdate}`);
   redirect(`/dashboard/groups/${groupIdFromUpdate}`);
 }
