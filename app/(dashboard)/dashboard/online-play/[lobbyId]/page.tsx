@@ -10,7 +10,6 @@ import {
   submitOnlineSwapAction,
 } from "@/actions/online";
 import { LobbyLiveView } from "@/components/online/lobby-live-view";
-import { LobbyPageRevalidator } from "@/components/online/lobby-page-revalidator";
 import type { LobbySnapshot } from "@/components/online/types";
 import { AppButton, PageHeader, SectionCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -34,7 +33,6 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
 
   const me = snapshot.players.find((player) => player.userId === user.id);
   const isOwner = snapshot.lobby.ownerUserId === user.id;
-  const shouldLiveRefresh = snapshot.lobby.status === "WAITING" || snapshot.lobby.status === "IN_PROGRESS";
   const swapLockedUserIds = snapshot.game?.publicState?.swapLockedUserIds ?? [];
   const allPlayersLockedSwap =
     snapshot.players.length > 0 && snapshot.players.every((player) => swapLockedUserIds.includes(player.userId));
@@ -60,8 +58,6 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
 
   return (
     <section className="space-y-6" data-testid="online-lobby-page">
-      <LobbyPageRevalidator enabled={shouldLiveRefresh} />
-
       <PageHeader
         title={`Lobby ${snapshot.lobby.code}`}
         description="Live room state, swap setup, and game table controls."
