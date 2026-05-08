@@ -30,7 +30,13 @@ const groupByIdInclude = Prisma.validator<Prisma.GroupInclude>()({
   },
   memberships: {
     include: {
-      player: true,
+      player: {
+        select: {
+          id: true,
+          displayName: true,
+          isActive: true,
+        },
+      },
     },
     orderBy: {
       player: {
