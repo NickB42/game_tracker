@@ -246,26 +246,28 @@ function getWinnerUserIdFromEnvelope(envelope: PersistedGameEnvelope): string | 
 }
 
 async function syncOnlineGamePlayers(db: Db, gameId: string, envelope: PersistedGameEnvelope) {
-  for (const player of envelope.game.players) {
-    await db.onlineGamePlayer.updateMany({
-      where: {
-        gameId,
-        userId: player.userId,
-      },
-      data: {
-        handCount: player.hand.length,
-        faceDownCount: player.tableFaceDown.length,
-        faceUpCardsJson: toJson(player.tableFaceUp),
-        status: player.isLoser ? "LOST" : player.isOut ? "OUT" : "ACTIVE",
-        placement: player.placement,
-        privateStateJson: toJson({
-          hand: player.hand,
-          tableFaceDown: player.tableFaceDown,
-          tableFaceUp: player.tableFaceUp,
-        }),
-      },
-    });
-  }
+  await Promise.all(
+    envelope.game.players.map((player) =>
+      db.onlineGamePlayer.updateMany({
+        where: {
+          gameId,
+          userId: player.userId,
+        },
+        data: {
+          handCount: player.hand.length,
+          faceDownCount: player.tableFaceDown.length,
+          faceUpCardsJson: toJson(player.tableFaceUp),
+          status: player.isLoser ? "LOST" : player.isOut ? "OUT" : "ACTIVE",
+          placement: player.placement,
+          privateStateJson: toJson({
+            hand: player.hand,
+            tableFaceDown: player.tableFaceDown,
+            tableFaceUp: player.tableFaceUp,
+          }),
+        },
+      }),
+    ),
+  );
 }
 
 async function getLobbyDebugOptions(db: Db, lobbyId: string): Promise<{ debugShortDeck: boolean }> {
