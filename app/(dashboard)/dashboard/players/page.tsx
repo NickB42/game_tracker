@@ -4,9 +4,11 @@ import { AppButton, DataTable, EmptyState, PageHeader, StatusBadge } from "@/com
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getPlayers } from "@/lib/db/players";
 
-export default async function PlayersPage() {
+export default async function PlayersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireAuthenticatedUser();
-  const players = await getPlayers({ includeInactive: true });
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const { players, hasNextPage } = await getPlayers({ includeInactive: true, page: currentPage });
 
   return (
     <section className="space-y-6">
@@ -66,6 +68,26 @@ export default async function PlayersPage() {
             </tbody>
           </table>
         </DataTable>
+      )}
+
+      {(currentPage > 1 || hasNextPage) && (
+        <div className="flex items-center justify-between pt-2">
+          {currentPage > 1 ? (
+            <Link className="app-button app-button-secondary" href={`/dashboard/players?page=${currentPage - 1}`}>
+              Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-sm text-[var(--text-muted)]">Page {currentPage}</span>
+          {hasNextPage ? (
+            <Link className="app-button app-button-secondary" href={`/dashboard/players?page=${currentPage + 1}`}>
+              Next
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
       )}
     </section>
   );

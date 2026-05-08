@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
-import { getPlayers } from "@/lib/db/players";
+import { getAllPlayers } from "@/lib/db/players";
 import { getAssignableUsers } from "@/lib/db/users";
 import { buildSessionsHref, parseSessionsActivityFilter } from "@/lib/sessions/filter-state";
 
@@ -40,7 +40,7 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
 
   const [groups, players, users] = await Promise.all([
     getGroups(user),
-    getPlayers({ includeInactive: true }),
+    getAllPlayers({ includeInactive: true }),
     getAssignableUsers(user),
   ]);
 

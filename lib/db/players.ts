@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { PlayerInput, PlayerUpdateInput } from "@/lib/validation/player";
 
-export async function getPlayers(options?: { includeInactive?: boolean }) {
+export async function getAllPlayers(options?: { includeInactive?: boolean }) {
   return prisma.player.findMany({
     where: options?.includeInactive ? undefined : { isActive: true },
     orderBy: { displayName: "asc" },
@@ -16,6 +16,31 @@ export async function getPlayers(options?: { includeInactive?: boolean }) {
       },
     },
   });
+}
+
+export async function getPlayers(options?: { includeInactive?: boolean; page?: number; pageSize?: number }) {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 50;
+
+  const rows = await prisma.player.findMany({
+    where: options?.includeInactive ? undefined : { isActive: true },
+    orderBy: { displayName: "asc" },
+    take: pageSize + 1,
+    skip: (page - 1) * pageSize,
+    include: {
+      _count: {
+        select: {
+          groupMemberships: true,
+          sessionParticipants: true,
+        },
+      },
+    },
+  });
+
+  const hasNextPage = rows.length > pageSize;
+  const players = hasNextPage ? rows.slice(0, pageSize) : rows;
+
+  return { players, hasNextPage, page, pageSize };
 }
 
 export async function getPlayerById(id: string) {
