@@ -5,6 +5,7 @@ export type SessionsActivityFilter = "ALL" | ActivityType;
 export type SessionsFilterState = {
   activity: SessionsActivityFilter;
   groupId?: string;
+  page?: number;
 };
 
 export function parseSessionsActivityFilter(value: string | undefined): SessionsActivityFilter {
@@ -24,6 +25,10 @@ export function buildSessionsQueryString(state: SessionsFilterState): string {
 
   if (state.groupId) {
     searchParams.set("groupId", state.groupId);
+  }
+
+  if (state.page && state.page > 1) {
+    searchParams.set("page", String(state.page));
   }
 
   return searchParams.toString();
