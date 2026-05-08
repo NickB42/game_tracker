@@ -213,7 +213,7 @@ function nextSeatIndex(players: Array<{ seatIndex: number }>) {
 
 function buildPublicStateForViewer(envelope: PersistedGameEnvelope, viewerUserId: string) {
   const effectivePile = getEffectivePileState(envelope.game.discardPile);
-  const legalMoves = envelope.game.phase === "active" ? getLegalMoves(envelope.game, viewerUserId) : [];
+  const legalMoves = envelope.game.phase === "active" ? getLegalMoves(envelope.game, viewerUserId, { maxCombinationSize: 4 }) : [];
   const currentPlayer = envelope.game.players.find((player) => player.seatIndex === envelope.game.currentPlayerSeatIndex);
   const burnedPileHistory = Array.isArray(envelope.game.burnedPileHistory) ? envelope.game.burnedPileHistory : [];
 
