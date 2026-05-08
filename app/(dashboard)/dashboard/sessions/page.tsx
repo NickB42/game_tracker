@@ -31,11 +31,13 @@ type SessionListRow = {
   };
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
+  return dateFormatter.format(value);
 }
 
 type SessionsPageProps = {
