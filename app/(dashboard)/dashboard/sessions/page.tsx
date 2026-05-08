@@ -52,20 +52,24 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
   const activityFilter = parseSessionsActivityFilter(activity);
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
-  const groups = await getGroups(user);
-  const selectedGroupId = groupId && groups.some((group) => group.id === groupId) ? groupId : undefined;
+  const rawGroupId = groupId ?? undefined;
+
+  const [groups, { sessions: rawSessions, hasNextPage }] = await Promise.all([
+    getGroups(user),
+    getGameSessions(user, {
+      activityType: activityFilter === "ALL" ? undefined : activityFilter,
+      groupId: rawGroupId,
+      page: currentPage,
+    }),
+  ]);
+
+  const validGroupId = rawGroupId && groups.some((group) => group.id === rawGroupId) ? rawGroupId : undefined;
+  const sessions = rawSessions as unknown as SessionListRow[];
 
   const selectableGroups =
     activityFilter === "ALL"
       ? groups
       : groups.filter((group) => group.activityType === activityFilter);
-
-  const { sessions: rawSessions, hasNextPage } = await getGameSessions(user, {
-    activityType: activityFilter === "ALL" ? undefined : activityFilter,
-    groupId: selectedGroupId,
-    page: currentPage,
-  });
-  const sessions = rawSessions as unknown as SessionListRow[];
 
   const latestSessionForActivity =
     activityFilter === "ALL"
@@ -74,7 +78,7 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
 
   const activeFilterState = {
     activity: activityFilter,
-    groupId: selectedGroupId,
+    groupId: validGroupId,
   } as SessionsFilterState;
 
   const quickCreateHref = buildNewSessionHref(activeFilterState);
@@ -113,9 +117,9 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
                 href={buildSessionsHref({
                   activity: entry.value as SessionsActivityFilter,
                   groupId:
-                    selectedGroupId &&
-                    (entry.value === "ALL" || selectableGroups.some((group) => group.id === selectedGroupId))
-                      ? selectedGroupId
+                    validGroupId &&
+                    (entry.value === "ALL" || selectableGroups.some((group) => group.id === validGroupId))
+                      ? validGroupId
                       : undefined,
                 })}
                 className={`app-button ${activityFilter === entry.value ? "app-button-primary" : "app-button-ghost"}`}
@@ -132,7 +136,7 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
           <label htmlFor="groupId" className="text-sm text-[var(--text-secondary)]">
             Group
           </label>
-          <select id="groupId" name="groupId" defaultValue={selectedGroupId ?? ""} className="app-select min-w-44">
+          <select id="groupId" name="groupId" defaultValue={validGroupId ?? ""} className="app-select min-w-44">
             <option value="">All groups</option>
             {selectableGroups.map((group) => (
               <option key={group.id} value={group.id}>

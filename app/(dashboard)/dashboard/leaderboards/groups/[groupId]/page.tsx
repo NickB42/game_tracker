@@ -32,15 +32,14 @@ export default async function GroupLeaderboardPage({ params, searchParams }: Gro
   const [{ groupId }, { activity }] = await Promise.all([params, searchParams]);
   const selectedActivity = parseActivity(activity);
 
-  const group = await getGroupById(groupId, user);
+  const [group, leaderboard] = await Promise.all([
+    getGroupById(groupId, user),
+    getGroupLeaderboard(groupId, user, { activityType: selectedActivity }),
+  ]);
 
   if (!group) {
     notFound();
   }
-
-  const leaderboard = await getGroupLeaderboard(group.id, user, {
-    activityType: selectedActivity,
-  });
 
   if (!leaderboard) {
     notFound();
