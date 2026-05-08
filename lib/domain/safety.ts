@@ -13,6 +13,11 @@ export type SessionEditLockReasons = {
   participantsLocked: boolean;
 };
 
+export function getSessionEditLockReasonsFromCounts(counts: { roundResults: number }): SessionEditLockReasons {
+  const locked = counts.roundResults > 0;
+  return { groupLocked: locked, participantsLocked: locked };
+}
+
 export async function getSessionEditLockReasons(
   gameSessionId: string,
   db: Prisma.TransactionClient | typeof prisma = prisma,
@@ -23,10 +28,5 @@ export async function getSessionEditLockReasons(
     },
   });
 
-  const locked = roundsCount > 0;
-
-  return {
-    groupLocked: locked,
-    participantsLocked: locked,
-  };
+  return getSessionEditLockReasonsFromCounts({ roundResults: roundsCount });
 }

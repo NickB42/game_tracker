@@ -5,7 +5,7 @@ import {
   type AuthorizationActor,
   type SessionAuthorizationContext,
 } from "@/lib/domain/authorization";
-import { GROUP_LOCK_MESSAGE, PARTICIPANTS_LOCK_MESSAGE, getSessionEditLockReasons } from "@/lib/domain/safety";
+import { GROUP_LOCK_MESSAGE, PARTICIPANTS_LOCK_MESSAGE, getSessionEditLockReasons, getSessionEditLockReasonsFromCounts } from "@/lib/domain/safety";
 import { prisma } from "@/lib/db/prisma";
 import type { GameSessionInput, GameSessionUpdateInput, SessionParticipantsUpdateInput } from "@/lib/validation/session";
 
@@ -267,7 +267,7 @@ export async function updateGameSession(input: GameSessionUpdateInput, tx?: Pris
     throw new Error("Activity cannot be changed after rounds or matches have been recorded for this session.");
   }
 
-  const lockReasons = await getSessionEditLockReasons(input.id, db);
+  const lockReasons = getSessionEditLockReasonsFromCounts(existing._count);
 
   if (lockReasons.groupLocked && existing.groupId !== input.groupId) {
     throw new Error(GROUP_LOCK_MESSAGE);
