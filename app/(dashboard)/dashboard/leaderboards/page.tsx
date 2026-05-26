@@ -3,7 +3,7 @@ import type { ActivityType } from "@prisma/client";
 
 import { formatActivityType } from "@/components/sessions/activity-badge";
 import { TrophyIcon } from "@/components/ui/icons";
-import { EmptyState, PageHeader, SectionCard } from "@/components/ui/primitives";
+import { EmptyState, SectionCard } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGroups } from "@/lib/db/groups";
 

@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 describe("SessionCard component", () => {
   it("can be imported", async () => {
@@ -56,51 +58,51 @@ describe("SessionCard component", () => {
 
 describe("Sessions page - ResponsiveList integration", () => {
   it("imports ResponsiveList", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("ResponsiveList"));
   });
 
   it("imports SessionCard", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("SessionCard"));
   });
 
   it("maintains filter state (activity, groupId)", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("activityFilter"));
     assert(source.includes("validGroupId"));
   });
 
   it("preserves pagination controls", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("currentPage") || source.includes("hasNextPage"));
   });
 
   it("maintains empty state handling", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("EmptyState"));
   });
 
   it("passes canEditSession logic to SessionCard", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("canEditSession"));
   });
 
   it("handles mobile and desktop renderers in ResponsiveList", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     // Check that ResponsiveList is used with both renderers
     assert(source.includes("ResponsiveList"));
@@ -109,8 +111,8 @@ describe("Sessions page - ResponsiveList integration", () => {
   });
 
   it("uses desktopHeaders prop for table headers", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("desktopHeaders"));
     assert(source.includes("Played at"));
@@ -119,22 +121,22 @@ describe("Sessions page - ResponsiveList integration", () => {
   });
 
   it("renders ActivityBadge in both mobile and desktop", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("ActivityBadge"));
   });
 
   it("preserves returnTo parameter for navigation context", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("returnTo"));
   });
 
   it("maintains backward compatibility with existing session list functionality", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     // Should still have the filter UI
     assert(source.includes("Activity filter") || source.includes("sessions-filters"));
@@ -145,8 +147,8 @@ describe("Sessions page - ResponsiveList integration", () => {
   });
 
   it("uses compact link filters without an apply button", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("sessions-filters"));
     assert(source.includes("sessions-group-filter-links"));
@@ -155,8 +157,8 @@ describe("Sessions page - ResponsiveList integration", () => {
   });
 
   it("uses one icon-only session create action", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("sessions-create-link"));
     assert(source.includes("app-icon-button"));
@@ -187,8 +189,8 @@ describe("Sessions page - Component structure validation", () => {
   });
 
   it("Sessions page data flow is intact", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = testModule.default.toString();
 
     // Should fetch and map sessions correctly
     assert(source.includes("getGameSessions"));
@@ -216,8 +218,8 @@ describe("Session form filtering", () => {
   });
 
   it("loads session form groups with member ids", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/new/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/new/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("getGroupsForSessionForm"));
     assert(source.includes("playerIds"));
@@ -227,8 +229,8 @@ describe("Session form filtering", () => {
 
 describe("Session detail and result action polish", () => {
   it("uses icon-only header actions and plain activity text in the overview", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("app-icon-button"));
     assert(source.includes("ArrowLeftIcon"));
@@ -239,15 +241,15 @@ describe("Session detail and result action polish", () => {
   });
 
   it("does not render an activity badge in the session detail header", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = testModule.default.toString();
 
     assert(!source.includes("ActivityBadge"));
   });
 
   it("links card sessions to the new round route", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("session-add-round-link"));
     assert(source.includes("/rounds/new"));
@@ -256,8 +258,8 @@ describe("Session detail and result action polish", () => {
   });
 
   it("keeps the new round page card-only", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/rounds/new/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/rounds/new/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("activityType"));
     assert(source.includes("CARD"));
@@ -296,12 +298,65 @@ describe("Session detail and result action polish", () => {
 
   it("highlights sports match winners without winner badges", async () => {
     const { SportsMatchesSection } = await import("@/components/sessions/sports-matches-section");
-    const source = SportsMatchesSection.toString();
 
-    assert(source.includes("winningSideNumber"));
-    assert(source.includes("TrophyIcon"));
-    assert(!source.includes("Winner: Side"));
-    assert(!source.includes("StatusBadge"));
+    const markup = renderToStaticMarkup(
+      createElement(SportsMatchesSection, {
+        gameSessionId: "session-1",
+        activityType: "SQUASH",
+        canManageSession: false,
+        matches: [
+          {
+            id: "match-1",
+            sequenceNumber: 1,
+            notes: null,
+            participants: [
+              {
+                id: "participant-1",
+                sideNumber: 1,
+                player: {
+                  id: "player-1",
+                  displayName: "Alice",
+                  isActive: true,
+                },
+              },
+              {
+                id: "participant-2",
+                sideNumber: 2,
+                player: {
+                  id: "player-2",
+                  displayName: "Bob",
+                  isActive: true,
+                },
+              },
+            ],
+            result: {
+              winningSideNumber: 1,
+              scoreLines: [
+                {
+                  id: "score-1",
+                  sequenceNumber: 1,
+                  sideNumber: 1,
+                  score: 11,
+                },
+                {
+                  id: "score-2",
+                  sequenceNumber: 1,
+                  sideNumber: 2,
+                  score: 7,
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    assert(markup.includes('data-winning-side="true"'));
+    assert.equal((markup.match(/data-winning-side="true"/g) ?? []).length, 1);
+    assert(markup.includes("Winning side"));
+    assert(markup.includes("Alice"));
+    assert(markup.includes("Bob"));
+    assert(!markup.includes("Winner: Side"));
   });
 
   it("renders sports scores alongside match sides", async () => {
@@ -317,8 +372,8 @@ describe("Session detail and result action polish", () => {
   });
 
   it("summarizes sports sessions with match wins", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("buildSportsSessionSummary"));
     assert(source.includes("matchWins"));

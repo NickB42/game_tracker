@@ -72,7 +72,12 @@ function renderSidePlayers(match: SportsMatchView, sideNumber: number, winningSi
 
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {winningSideNumber === sideNumber ? <TrophyIcon className="size-4 text-[var(--success)]" /> : null}
+      {winningSideNumber === sideNumber ? (
+        <>
+          <TrophyIcon className="size-4 text-[var(--success)]" />
+          <span className="sr-only">Winning side</span>
+        </>
+      ) : null}
       <span>{players.map((entry) => entry.player.displayName).join(" / ")}</span>
     </span>
   );
@@ -150,6 +155,7 @@ export function SportsMatchesSection({ gameSessionId, activityType, canManageSes
                   {[1, 2].map((sideNumber) => (
                     <div
                       key={sideNumber}
+                      data-winning-side={winningSideNumber === sideNumber ? "true" : undefined}
                       className={
                         winningSideNumber === sideNumber
                           ? "grid items-center border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--text-secondary)]"

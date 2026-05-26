@@ -42,8 +42,8 @@ describe("leaderboard data-layer filters", () => {
 
 describe("leaderboard page headers", () => {
   it("groups leaderboard links by activity without row badges or open buttons", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/leaderboards/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/leaderboards/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("groupsByActivity"));
     assert(source.includes("formatActivityType"));
@@ -55,16 +55,16 @@ describe("leaderboard page headers", () => {
   });
 
   it("does not render an activity badge in the global leaderboard header", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/leaderboards/global/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/leaderboards/global/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("Global leaderboard"));
     assert(!source.includes("ActivityBadge"));
   });
 
   it("does not render an activity badge in the group leaderboard header", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/leaderboards/groups/[groupId]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/leaderboards/groups/[groupId]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("PageHeader"));
     assert(!source.includes("ActivityBadge"));

@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    env:
+      DATABASE_URL: postgresql://localhost:5432/dummy
+      # CI build-only value. Do not reuse this value in production.
+      BETTER_AUTH_SECRET: ci-only-build-secret-7Wk9qP2mX8vR4nL6sT1cD3fH5jK0bZ8yQ4
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('app/**/*', 'components/**/*', 'lib/**/*', 'pages/**/*', 'public/**/*', 'next.config.*', 'tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type checking
+        id: typecheck
+        run: npx tsc --noEmit
+
+      - name: Run linter
+        id: lint
+        run: npm run lint
+
+      - name: Run dependency security audit
+        id: audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Build application
+        id: build
+        run: npm run build
+
+      - name: Analyze bundle size
+        id: bundle
+        if: steps.build.outcome == 'success'
+        run: |
+          echo "Build output size:" > /tmp/build-report.md
+          du -sh .next >> /tmp/build-report.md 2>&1 || true
+
+          echo "" >> /tmp/build-report.md
+          echo "Largest JavaScript and CSS files:" >> /tmp/build-report.md
+          find .next -type f \( -name "*.js" -o -name "*.css" \) -print0 \
+            | xargs -0 du -h 2>/dev/null \
+            | sort -h \
+            | tail -10 >> /tmp/build-report.md || true
+
+      - name: Comment PR with quality report
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          TYPECHECK_RESULT: ${{ steps.typecheck.outcome }}
+          LINT_RESULT: ${{ steps.lint.outcome }}
+          AUDIT_RESULT: ${{ steps.audit.outcome }}
+          BUILD_RESULT: ${{ steps.build.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            const formatStatus = (status) => {
+              switch (status) {
+                case 'success':
+                  return '✅ Passed';
+                case 'failure':
+                  return '❌ Failed';
+                case 'cancelled':
+                  return '⚪ Cancelled';
+                case 'skipped':
+                  return '⚪ Skipped';
+                default:
+                  return '⚪ Not run';
+              }
+            };
+
+            const typecheck = process.env.TYPECHECK_RESULT;
+            const lint = process.env.LINT_RESULT;
+            const audit = process.env.AUDIT_RESULT;
+            const build = process.env.BUILD_RESULT;
+
+            const buildReport = fs.existsSync('/tmp/build-report.md')
+              ? fs.readFileSync('/tmp/build-report.md', 'utf8')
+              : 'No build analysis available because the build did not complete successfully.';
+
+            const comment = `## CI Quality Report
+
+            | Check | Result |
+            | --- | --- |
+            | TypeScript type checking | ${formatStatus(typecheck)} |
+            | ESLint | ${formatStatus(lint)} |
+            | Dependency security audit | ${formatStatus(audit)} |
+            | Production build | ${formatStatus(build)} |
+
+            ### Bundle Analysis
+
+            \`\`\`
+            ${buildReport}
+            \`\`\`
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    env:
+      DATABASE_URL: postgresql://localhost:5432/dummy
+      # Included in case tested server modules validate auth configuration.
+      BETTER_AUTH_SECRET: ci-only-test-secret-4Mn8pR2vX6kL9sQ3dF7hJ1cB5wZ0yT8gN6aP2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        id: unit-tests
+        env:
+          NODE_V8_COVERAGE: coverage
+        run: npm run test:unit:coverage
+
+      - name: Upload coverage reports
+        id: coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Comment PR with test results
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          TEST_RESULT: ${{ steps.unit-tests.outcome }}
+        with:
+          script: |
+            const formatStatus = (status) => {
+              switch (status) {
+                case 'success':
+                  return '✅ Passed';
+                case 'failure':
+                  return '❌ Failed';
+                case 'cancelled':
+                  return '⚪ Cancelled';
+                case 'skipped':
+                  return '⚪ Skipped';
+                default:
+                  return '⚪ Not run';
+              }
+            };
+
+            const testResult = process.env.TEST_RESULT;
+
+            const comment = `## Unit Test Results
+
+            | Check | Result |
+            | --- | --- |
+            | Unit tests with coverage | ${formatStatus(testResult)} |
+
+            Coverage reports, when generated, are available in the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  sonarqube-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
