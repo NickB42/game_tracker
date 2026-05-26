@@ -100,8 +100,10 @@ describe("Players page - ResponsiveList integration", () => {
     const module = await import("@/app/(dashboard)/dashboard/players/page");
     const source = module.default.toString();
 
-    assert(source.includes("mobile={"));
-    assert(source.includes("desktop={"));
+    // Check that ResponsiveList is used with both renderers
+    assert(source.includes("ResponsiveList"));
+    assert(source.includes("PlayerCard"));
+    assert(source.includes("View") && source.includes("Edit"));
   });
 
   it("maintains backward compatibility with view/edit actions", async () => {

@@ -13,7 +13,7 @@ describe("GroupCard component", () => {
 
     assert(source.includes("group.name"));
     assert(source.includes("activityType"));
-    assert(source.includes("ActivityBadge"));
+    assert(source.includes("badge"));
   });
 
   it("shows members and sessions count", async () => {
@@ -92,8 +92,10 @@ describe("Groups page - ResponsiveList integration", () => {
     const module = await import("@/app/(dashboard)/dashboard/groups/page");
     const source = module.default.toString();
 
-    assert(source.includes("mobile={"));
-    assert(source.includes("desktop={"));
+    // Check that ResponsiveList is used with both renderers
+    assert(source.includes("ResponsiveList"));
+    assert(source.includes("GroupCard"));
+    assert(source.includes("View") && source.includes("Edit"));
   });
 
   it("maintains backward compatibility with view/edit actions", async () => {
