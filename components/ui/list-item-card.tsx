@@ -26,14 +26,11 @@ export function ListItemCard({
   href,
   badge,
 }: ListItemCardProps) {
-  const Wrapper = href ? Link : 'div'
-  const wrapperProps = href ? { href } : {}
+  const className =
+    'app-card group cursor-pointer active:scale-95 transition-transform active:duration-75 p-4'
 
-  return (
-    <Wrapper
-      {...wrapperProps}
-      className="app-card group cursor-pointer active:scale-95 transition-transform active:duration-75 p-4"
-    >
+  const content = (
+    <>
       {/* Header: title, badge, actions */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -42,6 +39,7 @@ export function ListItemCard({
             <p className="text-sm text-text-secondary mt-0.5">{subtitle}</p>
           )}
         </div>
+
         {badge && (
           <span
             className={`inline-block px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
@@ -69,7 +67,9 @@ export function ListItemCard({
           {stats.map(({ label, value }) => (
             <div key={label}>
               <div className="text-xs text-text-secondary">{label}</div>
-              <div className="font-semibold text-text-primary text-sm">{value}</div>
+              <div className="font-semibold text-text-primary text-sm">
+                {value}
+              </div>
             </div>
           ))}
         </div>
@@ -81,6 +81,16 @@ export function ListItemCard({
           {actions}
         </div>
       )}
-    </Wrapper>
+    </>
   )
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    )
+  }
+
+  return <div className={className}>{content}</div>
 }
