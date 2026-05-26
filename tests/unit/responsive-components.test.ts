@@ -112,13 +112,13 @@ describe("Responsive Components - Props Validation", () => {
 // Test backward compatibility
 describe("LeaderboardTable - Backward Compatibility", () => {
   it("maintains same export interface", async () => {
-    const module = await import("@/components/leaderboards/leaderboard-table");
+    const testModule = await import("@/components/leaderboards/leaderboard-table");
     
     // Should still export LeaderboardTable as named export
-    assert(typeof module.LeaderboardTable === "function");
+    assert(typeof testModule.LeaderboardTable === "function");
     
     // Should accept same props as before
-    const source = module.LeaderboardTable.toString();
+    const source = testModule.LeaderboardTable.toString();
     assert(source.includes("rows"));
     assert(source.includes("activityType"));
     assert(source.includes("scopeLabel"));

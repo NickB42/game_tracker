@@ -42,30 +42,30 @@ describe("GroupCard component", () => {
 
 describe("Groups page - ResponsiveList integration", () => {
   it("imports ResponsiveList and GroupCard", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("ResponsiveList"));
     assert(source.includes("GroupCard"));
   });
 
   it("maintains empty state handling", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("EmptyState"));
   });
 
   it("preserves activity badge display", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("ActivityBadge"));
   });
 
   it("maintains authorization checks for edit functionality", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("canEditGroup"));
     assert(source.includes("isOwner"));
@@ -73,15 +73,15 @@ describe("Groups page - ResponsiveList integration", () => {
   });
 
   it("preserves group creation controls", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("canCreateGroup"));
   });
 
   it("uses one icon-only group create action", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("groups-create-link"));
     assert(source.includes("app-icon-button"));
@@ -90,8 +90,8 @@ describe("Groups page - ResponsiveList integration", () => {
   });
 
   it("uses desktopHeaders prop for table headers", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("desktopHeaders"));
     assert(source.includes("Activity"));
@@ -99,8 +99,8 @@ describe("Groups page - ResponsiveList integration", () => {
   });
 
   it("renders both mobile and desktop variants", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     // Check that ResponsiveList is used with both renderers
     assert(source.includes("ResponsiveList"));
@@ -109,8 +109,8 @@ describe("Groups page - ResponsiveList integration", () => {
   });
 
   it("maintains backward compatibility with view/edit actions", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("/dashboard/groups/"));
     assert(source.includes("View"));
@@ -131,8 +131,8 @@ describe("Groups page - Component structure validation", () => {
   });
 
   it("Groups page maintains data fetching", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     // Should fetch groups correctly
     assert(source.includes("getGroups"));
@@ -140,8 +140,8 @@ describe("Groups page - Component structure validation", () => {
   });
 
   it("Groups page preserves authorization checking", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("canCreateGroup"));
     assert(source.includes("canEditGroup"));
@@ -150,40 +150,40 @@ describe("Groups page - Component structure validation", () => {
 
 describe("Group detail page - mobile layout", () => {
   it("does not render an activity badge in the header", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = testModule.default.toString();
 
     assert(!source.includes("ActivityBadge"));
     assert(source.includes("formatActivityType"));
   });
 
   it("hides stat cards on mobile", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("hidden md:grid"));
     assert(source.includes("StatCard"));
   });
 
   it("keeps trusted admins as desktop supporting content", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("hidden md:block"));
     assert(source.includes("Trusted admins"));
   });
 
   it("keeps members visible as primary group content", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("Members"));
     assert(source.includes("groupRecord.memberships.map"));
   });
 
   it("uses icon-only header actions and plain activity text", async () => {
-    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
-    const source = module.default.toString();
+    const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = testModule.default.toString();
 
     assert(source.includes("app-icon-button"));
     assert(source.includes("ArrowLeftIcon"));
