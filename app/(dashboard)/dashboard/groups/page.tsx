@@ -1,7 +1,9 @@
 import Link from "next/link";
 
 import { ActivityBadge } from "@/components/sessions/activity-badge";
-import { AppButton, DataTable, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
+import { GroupCard } from "@/components/groups/group-card";
+import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
+import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateGroup, canEditGroup } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
@@ -25,47 +27,48 @@ export default async function GroupsPage() {
           action={canCreateGroup(user) ? <AppButton href="/dashboard/groups/new">Create group</AppButton> : null}
         />
       ) : (
-        <DataTable>
-          <table className="app-table min-w-full">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Activity</th>
-                <th>Members</th>
-                <th>Sessions</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.map((group) => (
-                <tr key={group.id}>
-                  <td className="font-medium text-[var(--text-primary)]">{group.name}</td>
-                  <td>
-                    <ActivityBadge activityType={group.activityType} />
-                  </td>
-                  <td>{group._count.memberships}</td>
-                  <td>{group._count.gameSessions}</td>
-                  <td>
-                    <div className="flex flex-wrap gap-2">
-                      <Link className="app-button app-button-ghost" href={`/dashboard/groups/${group.id}`}>
-                        View
-                      </Link>
-                      {canEditGroup(user, {
-                        isOwner: group.ownerUserId === user.id,
-                        isTrustedAdmin: group.trustedAdmins.length > 0,
-                        isMember: false,
-                      }) ? (
-                        <Link className="app-button app-button-secondary" href={`/dashboard/groups/${group.id}/edit`}>
-                          Edit
-                        </Link>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTable>
+        <ResponsiveList
+          data={groups}
+          testId="groups-list"
+          desktopHeaders={
+            <tr>
+              <th>Name</th>
+              <th>Activity</th>
+              <th>Members</th>
+              <th>Sessions</th>
+              <th>Actions</th>
+            </tr>
+          }
+          mobile={(group) => (
+            <GroupCard group={group} />
+          )}
+          desktop={(group) => (
+            <tr key={group.id}>
+              <td className="font-medium text-[var(--text-primary)]">{group.name}</td>
+              <td>
+                <ActivityBadge activityType={group.activityType} />
+              </td>
+              <td>{group._count.memberships}</td>
+              <td>{group._count.gameSessions}</td>
+              <td>
+                <div className="flex flex-wrap gap-2">
+                  <Link className="app-button app-button-ghost" href={`/dashboard/groups/${group.id}`}>
+                    View
+                  </Link>
+                  {canEditGroup(user, {
+                    isOwner: group.ownerUserId === user.id,
+                    isTrustedAdmin: group.trustedAdmins.length > 0,
+                    isMember: false,
+                  }) ? (
+                    <Link className="app-button app-button-secondary" href={`/dashboard/groups/${group.id}/edit`}>
+                      Edit
+                    </Link>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       )}
     </section>
   );
