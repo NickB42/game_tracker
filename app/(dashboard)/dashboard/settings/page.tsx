@@ -4,18 +4,16 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 
 export default async function SettingsPage() {
-  const user = await requireAuthenticatedUser();
+  await requireAuthenticatedUser();
 
   return (
     <section className="space-y-6">
       <PageHeader
         title="Settings"
-        description={`Signed in as ${user.email}. Manage appearance and account security.`}
       />
 
       <SectionCard
         title="Appearance"
-        description="Choose how the app looks on this device."
         actions={<StatusBadge>Local preference</StatusBadge>}
       >
         <ThemeToggle />
@@ -28,7 +26,6 @@ export default async function SettingsPage() {
           </h2>
           <StatusBadge>Account protection</StatusBadge>
         </div>
-        <p className="text-sm text-[var(--text-secondary)]">Change your password and optionally revoke other active sessions.</p>
         <SecurityPasswordForm />
       </section>
     </section>

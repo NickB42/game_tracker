@@ -11,7 +11,6 @@ export default async function NewPlayerPage() {
     <section className="space-y-6">
       <PageHeader
         title="Create player"
-        description="Create a global player record for future group and session usage."
         actions={
           <Link className="app-button app-button-secondary" href="/dashboard/players">
             Back to players

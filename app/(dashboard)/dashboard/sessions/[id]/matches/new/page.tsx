@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SportsMatchForm } from "@/components/sessions/sports-match-form";
-import { PageHeader, StatusBadge } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getSportsMatchesByGameSessionId } from "@/lib/db/matches";
@@ -70,11 +70,11 @@ export default async function NewSportsMatchPage({ params, searchParams }: NewSp
     <section className="space-y-5">
       <PageHeader
         title={gameSession.activityType === "SQUASH" ? "Add squash match" : "Add padel match"}
-        description="Record one manual match result for this session."
         actions={
-          <Link className="app-button app-button-ghost" href={`/dashboard/sessions/${gameSession.id}`}>
-            Back to session
-          </Link>
+          <AppButton href={`/dashboard/sessions/${gameSession.id}`} variant="ghost" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to session</span>
+          </AppButton>
         }
       />
 

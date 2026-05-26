@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { PlayerCard } from "@/components/players/player-card";
+import { PlusIcon } from "@/components/ui/icons";
 import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -16,11 +17,11 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
     <section className="space-y-6">
       <PageHeader
         title="Players"
-        description="Global player records used across all groups and future game sessions."
         actions={
           user.role === "ADMIN" ? (
-            <AppButton href="/dashboard/players/new" data-testid="players-new-link">
-              New player
+            <AppButton href="/dashboard/players/new" className="app-icon-button" data-testid="players-new-link">
+              <PlusIcon />
+              <span className="sr-only">New player</span>
             </AppButton>
           ) : (
             <StatusBadge>Read only</StatusBadge>
@@ -32,7 +33,6 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
         <EmptyState
           title="No players yet"
           description="Create a player to use in groups, sessions, and online play exports."
-          action={user.role === "ADMIN" ? <AppButton href="/dashboard/players/new">Create player</AppButton> : null}
         />
       ) : (
         <ResponsiveList

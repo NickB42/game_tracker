@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { ActivityType } from "@prisma/client";
 
-import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
-import { PageHeader } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGlobalLeaderboard } from "@/lib/db/leaderboards";
 
@@ -30,22 +30,13 @@ export default async function GlobalLeaderboardPage({ searchParams }: GlobalLead
   return (
     <section className="space-y-6">
       <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2">
-            <span>Global leaderboard</span>
-            <ActivityBadge activityType={leaderboard.activityType} />
-          </span>
-        }
-        description={
-          activityType === "CARD"
-            ? "OpenSkill ratings replayed from ranked card round finishes."
-            : `Elo ratings replayed from ${activityType.toLowerCase()} match results.`
-        }
+        title="Global leaderboard"
         data-testid="global-leaderboard-heading"
         actions={
-          <Link className="app-button app-button-secondary" href="/dashboard/leaderboards">
-            Back to leaderboards
-          </Link>
+          <AppButton href="/dashboard/leaderboards" variant="secondary" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to leaderboards</span>
+          </AppButton>
         }
       />
 

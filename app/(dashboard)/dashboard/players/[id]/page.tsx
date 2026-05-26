@@ -25,7 +25,6 @@ export default async function PlayerDetailPage({ params }: PlayerDetailPageProps
     <section className="space-y-6">
       <PageHeader
         title={player.displayName}
-        description="Player details and current group memberships."
         data-testid="player-detail-heading"
         actions={
           <div className="flex flex-wrap gap-2">
@@ -58,7 +57,7 @@ export default async function PlayerDetailPage({ params }: PlayerDetailPageProps
         {player.notes ? <p className="text-sm text-[var(--text-secondary)]">{player.notes}</p> : <EmptyState title="No notes yet" description="Add context such as aliases or seating preferences from the edit view." />}
       </SectionCard>
 
-      <SectionCard title="Groups" description="Current memberships for this player.">
+      <SectionCard title="Groups">
         {player.groupMemberships.length === 0 ? (
           <EmptyState title="No memberships" description="This player is not assigned to any group yet." />
         ) : (

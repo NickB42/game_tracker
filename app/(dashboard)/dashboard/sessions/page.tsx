@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { SessionCard } from "@/components/sessions/session-card";
+import { PlusIcon } from "@/components/ui/icons";
 import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -75,11 +76,6 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
       ? groups
       : groups.filter((group) => group.activityType === activityFilter);
 
-  const latestSessionForActivity =
-    activityFilter === "ALL"
-      ? null
-      : sessions.find((session) => session.activityType === activityFilter) ?? null;
-
   const activeFilterState = {
     activity: activityFilter,
     groupId: validGroupId,
@@ -100,75 +96,61 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
     <section className="space-y-6">
       <PageHeader
         title="Game Sessions"
-        description="One shared list for card and sports sessions with fast filtering and quick entry actions."
         actions={
-          canCreateSession(user) ? <AppButton href={quickCreateHref}>New Session</AppButton> : <StatusBadge>Read Only</StatusBadge>
+          canCreateSession(user) ? (
+            <AppButton href={quickCreateHref} className="app-icon-button" data-testid="sessions-create-link">
+              <PlusIcon />
+              <span className="sr-only">New session</span>
+            </AppButton>
+          ) : (
+            <StatusBadge>Read Only</StatusBadge>
+          )
         }
       />
 
-      <div className="app-card-muted flex flex-wrap items-end gap-3 p-3" data-testid="sessions-filters">
-        <div>
-          <p className="mb-1 text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">Activity</p>
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { value: "ALL", label: "All" },
-              { value: "CARD", label: "Card" },
-              { value: "SQUASH", label: "Squash" },
-              { value: "PADEL", label: "Padel" },
-            ].map((entry) => (
-              <Link
-                key={entry.value}
-                href={buildSessionsHref({
-                  activity: entry.value as SessionsActivityFilter,
-                  groupId:
-                    validGroupId &&
-                    (entry.value === "ALL" || selectableGroups.some((group) => group.id === validGroupId))
-                      ? validGroupId
-                      : undefined,
-                })}
-                className={`app-button ${activityFilter === entry.value ? "app-button-primary" : "app-button-ghost"}`}
-                data-testid={`sessions-activity-filter-${entry.value.toLowerCase()}`}
-              >
-                {entry.label}
-              </Link>
-            ))}
-          </div>
+      <div className="space-y-3" data-testid="sessions-filters">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {[
+            { value: "ALL", label: "All" },
+            { value: "CARD", label: "Card" },
+            { value: "SQUASH", label: "Squash" },
+            { value: "PADEL", label: "Padel" },
+          ].map((entry) => (
+            <Link
+              key={entry.value}
+              href={buildSessionsHref({
+                activity: entry.value as SessionsActivityFilter,
+                groupId:
+                  validGroupId &&
+                  (entry.value === "ALL" || groups.some((group) => group.id === validGroupId && group.activityType === entry.value))
+                    ? validGroupId
+                    : undefined,
+              })}
+              className={`app-button whitespace-nowrap ${activityFilter === entry.value ? "app-button-primary" : "app-button-ghost"}`}
+              data-testid={`sessions-activity-filter-${entry.value.toLowerCase()}`}
+            >
+              {entry.label}
+            </Link>
+          ))}
         </div>
 
-        <form method="get" className="ml-auto flex flex-wrap items-end gap-2" data-testid="sessions-group-filter-form">
-          {activityFilter !== "ALL" ? <input type="hidden" name="activity" value={activityFilter} /> : null}
-          <label htmlFor="groupId" className="text-sm text-[var(--text-secondary)]">
-            Group
-          </label>
-          <select id="groupId" name="groupId" defaultValue={validGroupId ?? ""} className="app-select min-w-44">
-            <option value="">All groups</option>
-            {selectableGroups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="app-button app-button-secondary" data-testid="sessions-group-filter-apply">
-            Apply
-          </button>
-        </form>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2" data-testid="sessions-quick-actions">
-        {canCreateSession(user) ? (
-          <AppButton href={quickCreateHref} variant="secondary" data-testid="sessions-quick-create">
-            Create {activityFilter === "ALL" ? "Session" : `${activityFilter.toLowerCase()} session`}
-          </AppButton>
-        ) : null}
-        {latestSessionForActivity ? (
-          <AppButton
-            href={`/dashboard/sessions/${latestSessionForActivity.id}`}
-            variant="ghost"
-            data-testid="sessions-open-latest-activity"
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" data-testid="sessions-group-filter-links">
+          <Link
+            href={buildSessionsHref({ activity: activityFilter })}
+            className={`app-button whitespace-nowrap ${validGroupId ? "app-button-ghost" : "app-button-secondary"}`}
           >
-            Open latest {activityFilter.toLowerCase()} session
-          </AppButton>
-        ) : null}
+            All groups
+          </Link>
+          {selectableGroups.map((group) => (
+            <Link
+              key={group.id}
+              href={buildSessionsHref({ activity: activityFilter, groupId: group.id })}
+              className={`app-button whitespace-nowrap ${validGroupId === group.id ? "app-button-secondary" : "app-button-ghost"}`}
+            >
+              {group.name}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {sessions.length === 0 ? (
@@ -179,7 +161,6 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
               ? "Create your first session to start recording rounds and match results."
               : `No ${activityFilter.toLowerCase()} sessions found for the selected filters.`
           }
-          action={canCreateSession(user) ? <AppButton href={quickCreateHref}>Create Session</AppButton> : null}
         />
       ) : (
         <ResponsiveList

@@ -87,6 +87,17 @@ describe("Players page - ResponsiveList integration", () => {
     assert(source.includes("isActive"));
   });
 
+  it("uses one icon-only player create action", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/players/page");
+    const source = module.default.toString();
+
+    assert(source.includes("players-new-link"));
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("PlusIcon"));
+    assert(!source.includes("Create player"));
+    assert(!source.includes("Global player records"));
+  });
+
   it("uses desktopHeaders prop for table headers", async () => {
     const module = await import("@/app/(dashboard)/dashboard/players/page");
     const source = module.default.toString();

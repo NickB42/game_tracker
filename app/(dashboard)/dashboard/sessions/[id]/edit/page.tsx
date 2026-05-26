@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SessionForm } from "@/components/sessions/session-form";
-import { PageHeader } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
-import { getGroups } from "@/lib/db/groups";
+import { getGroupsForSessionForm } from "@/lib/db/groups";
 import { getAllPlayers } from "@/lib/db/players";
 import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 import { getAssignableUsers } from "@/lib/db/users";
@@ -34,7 +34,7 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
   const [gameSessionRaw, sessionContext, groups, players, users] = await Promise.all([
     getGameSessionById(id, user),
     getGameSessionAuthorizationContext(id, user),
-    getGroups(user),
+    getGroupsForSessionForm(user),
     getAllPlayers({ includeInactive: true }),
     getAssignableUsers(user),
   ]);
@@ -49,18 +49,23 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
     <section className="space-y-5">
       <PageHeader
         title="Edit Game Session"
-        description="Update session details and synchronize attendance."
         actions={
-          <Link className="app-button app-button-ghost" href={`/dashboard/sessions/${gameSession.id}`}>
-            Back to session
-          </Link>
+          <AppButton href={`/dashboard/sessions/${gameSession.id}`} variant="ghost" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to session</span>
+          </AppButton>
         }
       />
 
       <SessionForm
         mode="edit"
         gameSessionId={gameSession.id}
-        selectableGroups={groups.map((group) => ({ id: group.id, name: group.name }))}
+        selectableGroups={groups.map((group) => ({
+          id: group.id,
+          name: group.name,
+          activityType: group.activityType,
+          playerIds: group.memberships.map((membership) => membership.playerId),
+        }))}
         selectableUsers={users.map((entry) => ({
           id: entry.id,
           name: entry.name,

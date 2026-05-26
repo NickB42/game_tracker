@@ -22,7 +22,6 @@ export default async function NewManagedUserPage() {
     <section className="space-y-6">
       <PageHeader
         title="Create user"
-        description="Create an invited account with a temporary password."
         actions={
           <Link className="app-button app-button-secondary" href="/dashboard/admin/users">
             Back to users

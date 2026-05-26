@@ -60,7 +60,6 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
     <section className="space-y-6" data-testid="online-lobby-page">
       <PageHeader
         title={`Lobby ${snapshot.lobby.code}`}
-        description="Live room state, swap setup, and game table controls."
         actions={
           <div className="flex flex-wrap gap-2">
             <StatusBadge tone={snapshot.lobby.status === "IN_PROGRESS" ? "accent" : "neutral"}>{snapshot.lobby.status}</StatusBadge>
@@ -72,7 +71,7 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
       />
 
       {snapshot.game?.publicState?.phase === "swap" ? (
-        <SectionCard title="Swap setup" description="Each player must lock exactly 3 face-up cards before active turns can begin.">
+        <SectionCard title="Swap setup">
           <p className="text-sm text-[var(--text-muted)]">
             Swap lock progress: {swapLockedUserIds.length}/{snapshot.players.length} players locked their face-up selection.
           </p>
@@ -82,9 +81,6 @@ export default async function OnlineLobbyPage({ params }: PageProps) {
 
           <form action={submitSwapFormAction} className="app-card-muted mt-4 rounded-lg p-3">
             <p className="text-sm font-medium text-[var(--text-secondary)]">Choose your 3 face-up cards</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              You can see 6 cards here. Select exactly 3 to place face-up. The remaining 3 become your hand.
-            </p>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {myVisibleCards.map((card) => (

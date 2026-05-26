@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { GroupForm } from "@/components/groups/group-form";
-import { PageHeader } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditGroup } from "@/lib/domain/authorization";
 import { getGroupAuthorizationContext, getGroupById } from "@/lib/db/groups";
@@ -37,11 +37,11 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
     <section className="space-y-6">
       <PageHeader
         title="Edit group"
-        description="Update group details and synchronize members."
         actions={
-          <Link className="app-button app-button-secondary" href={`/dashboard/groups/${groupRecord.id}`}>
-            Back to group
-          </Link>
+          <AppButton href={`/dashboard/groups/${groupRecord.id}`} variant="secondary" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to group</span>
+          </AppButton>
         }
       />
 

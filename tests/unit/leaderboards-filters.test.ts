@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
@@ -36,5 +37,45 @@ describe("leaderboard data-layer filters", () => {
     assert.equal(where.gameSession.archivedAt, null);
     assert.equal(where.gameSession.activityType, "PADEL");
     assert.equal(where.gameSession.groupId, "group-2");
+  });
+});
+
+describe("leaderboard page headers", () => {
+  it("groups leaderboard links by activity without row badges or open buttons", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/leaderboards/page");
+    const source = module.default.toString();
+
+    assert(source.includes("groupsByActivity"));
+    assert(source.includes("formatActivityType"));
+    assert(source.includes("Global leaderboard"));
+    assert(source.includes("TrophyIcon"));
+    assert(!source.includes("ActivityBadge"));
+    assert(!source.includes("Open leaderboard"));
+    assert(!source.includes("Open global leaderboard"));
+  });
+
+  it("does not render an activity badge in the global leaderboard header", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/leaderboards/global/page");
+    const source = module.default.toString();
+
+    assert(source.includes("Global leaderboard"));
+    assert(!source.includes("ActivityBadge"));
+  });
+
+  it("does not render an activity badge in the group leaderboard header", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/leaderboards/groups/[groupId]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("PageHeader"));
+    assert(!source.includes("ActivityBadge"));
+  });
+
+  it("uses a back icon and text actions on group leaderboard pages", async () => {
+    const source = await readFile("app/(dashboard)/dashboard/leaderboards/groups/[groupId]/page.tsx", "utf8");
+
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("ArrowLeftIcon"));
+    assert(source.includes("Open group"));
+    assert(source.includes("{entry.label}"));
   });
 });

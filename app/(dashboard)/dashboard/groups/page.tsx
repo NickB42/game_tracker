@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { GroupCard } from "@/components/groups/group-card";
+import { PlusIcon } from "@/components/ui/icons";
 import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
@@ -16,15 +17,22 @@ export default async function GroupsPage() {
     <section className="space-y-6">
       <PageHeader
         title="Groups"
-        description="Named collections of players with explicit memberships and trusted admin controls."
-        actions={canCreateGroup(user) ? <AppButton href="/dashboard/groups/new">New group</AppButton> : <StatusBadge>Read only</StatusBadge>}
+        actions={
+          canCreateGroup(user) ? (
+            <AppButton href="/dashboard/groups/new" className="app-icon-button" data-testid="groups-create-link">
+              <PlusIcon />
+              <span className="sr-only">New group</span>
+            </AppButton>
+          ) : (
+            <StatusBadge>Read only</StatusBadge>
+          )
+        }
       />
 
       {groups.length === 0 ? (
         <EmptyState
           title="No groups yet"
           description="Create a group to organize memberships, run sessions, and unlock group leaderboards."
-          action={canCreateGroup(user) ? <AppButton href="/dashboard/groups/new">Create group</AppButton> : null}
         />
       ) : (
         <ResponsiveList

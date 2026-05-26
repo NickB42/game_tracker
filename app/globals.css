@@ -397,6 +397,19 @@ a {
   color: color-mix(in srgb, var(--danger) 85%, white 15%);
 }
 
+.app-icon-button {
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.app-icon-button svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  stroke-width: 2.1;
+}
+
 .app-input,
 .app-select,
 .app-textarea {
@@ -556,18 +569,16 @@ a {
 
   .app-mobile-tabs {
     position: fixed;
-    right: 0.6rem;
-    bottom: 0.55rem;
-    left: 0.6rem;
+    right: 0;
+    bottom: -1px;
+    left: 0;
     z-index: 45;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.3rem;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
-    padding: 0.34rem;
-    backdrop-filter: blur(14px);
-    box-shadow: var(--shadow-md);
+    gap: 0.35rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-elevated);
+    padding: 0.45rem max(0.6rem, env(safe-area-inset-left)) calc(0.45rem + env(safe-area-inset-bottom) + 1px) max(0.6rem, env(safe-area-inset-right));
+    box-shadow: 0 -12px 28px rgba(2, 8, 23, 0.18);
   }
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { PlusIcon } from "@/components/ui/icons";
 import { AppButton, DataTable, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
 import { requireAdminUser } from "@/lib/auth/guards";
 import { getUsers } from "@/lib/auth/user-management";
@@ -12,16 +13,19 @@ export default async function AdminUsersPage() {
     <section className="space-y-6">
       <PageHeader
         title="User management"
-        description="Admin-only account management for this private invite-only app."
         data-testid="admin-users-heading"
-        actions={<AppButton href="/dashboard/admin/users/new">New user</AppButton>}
+        actions={
+          <AppButton href="/dashboard/admin/users/new" className="app-icon-button">
+            <PlusIcon />
+            <span className="sr-only">New user</span>
+          </AppButton>
+        }
       />
 
       {users.length === 0 ? (
         <EmptyState
           title="No users found"
           description="Create the first managed account to invite members into the tracker."
-          action={<AppButton href="/dashboard/admin/users/new">Create user</AppButton>}
         />
       ) : (
         <DataTable>

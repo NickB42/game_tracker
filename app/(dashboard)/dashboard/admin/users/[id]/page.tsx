@@ -45,7 +45,6 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
     <section className="space-y-6">
       <PageHeader
         title="Manage user"
-        description="Update role, linked player, must-change policy, and temporary password."
         actions={
           <Link className="app-button app-button-secondary" href="/dashboard/admin/users">
             Back to users

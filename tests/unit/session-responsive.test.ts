@@ -138,10 +138,32 @@ describe("Sessions page - ResponsiveList integration", () => {
 
     // Should still have the filter UI
     assert(source.includes("Activity filter") || source.includes("sessions-filters"));
-    // Should still have quick actions
-    assert(source.includes("quick-actions") || source.includes("quickCreate"));
+    // Should still have create navigation context
+    assert(source.includes("quickCreate"));
     // Should still handle pagination
     assert(source.includes("currentPage") || source.includes("hasNextPage"));
+  });
+
+  it("uses compact link filters without an apply button", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = module.default.toString();
+
+    assert(source.includes("sessions-filters"));
+    assert(source.includes("sessions-group-filter-links"));
+    assert(!source.includes("sessions-group-filter-apply"));
+    assert(!source.includes("Apply"));
+  });
+
+  it("uses one icon-only session create action", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/page");
+    const source = module.default.toString();
+
+    assert(source.includes("sessions-create-link"));
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("PlusIcon"));
+    assert(!source.includes("sessions-quick-actions"));
+    assert(!source.includes("sessions-quick-create"));
+    assert(!source.includes("Create Session"));
   });
 });
 
@@ -172,5 +194,134 @@ describe("Sessions page - Component structure validation", () => {
     assert(source.includes("getGameSessions"));
     assert(source.includes("sessions"));
     assert(source.includes("formatResultCount"));
+  });
+});
+
+describe("Session form filtering", () => {
+  it("filters groups by the selected activity", async () => {
+    const { SessionForm } = await import("@/components/sessions/session-form");
+    const source = SessionForm.toString();
+
+    assert(source.includes("selectableGroupsForActivity"));
+    assert(source.includes("activityType"));
+    assert(source.includes("selectedActivityType"));
+  });
+
+  it("filters participants by the selected group", async () => {
+    const { SessionForm } = await import("@/components/sessions/session-form");
+    const source = SessionForm.toString();
+
+    assert(source.includes("selectablePlayersForGroup"));
+    assert(source.includes("selectedGroup.playerIds.includes"));
+  });
+
+  it("loads session form groups with member ids", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/new/page");
+    const source = module.default.toString();
+
+    assert(source.includes("getGroupsForSessionForm"));
+    assert(source.includes("playerIds"));
+    assert(source.includes("membership.playerId"));
+  });
+});
+
+describe("Session detail and result action polish", () => {
+  it("uses icon-only header actions and plain activity text in the overview", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("ArrowLeftIcon"));
+    assert(source.includes("TrophyIcon"));
+    assert(source.includes("PencilIcon"));
+    assert(source.includes("PlusIcon"));
+    assert(source.includes("formatActivityType"));
+  });
+
+  it("does not render an activity badge in the session detail header", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = module.default.toString();
+
+    assert(!source.includes("ActivityBadge"));
+  });
+
+  it("links card sessions to the new round route", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("session-add-round-link"));
+    assert(source.includes("/rounds/new"));
+    assert(source.includes("activityType"));
+    assert(source.includes("CARD"));
+  });
+
+  it("keeps the new round page card-only", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/rounds/new/page");
+    const source = module.default.toString();
+
+    assert(source.includes("activityType"));
+    assert(source.includes("CARD"));
+    assert(source.includes("notFound"));
+    assert(source.includes("RoundForm"));
+  });
+
+  it("uses a draggable order list for round placement entry", async () => {
+    const { RoundForm } = await import("@/components/rounds/round-form");
+    const source = RoundForm.toString();
+
+    assert(source.includes("DndContext"));
+    assert(source.includes("round-order-list"));
+    assert(source.includes("orderedSessionParticipantIds"));
+    assert(!source.includes("round-position-select"));
+  });
+
+  it("removes the placements badge from card rounds", async () => {
+    const { CardRoundsSection } = await import("@/components/sessions/card-rounds-section");
+    const source = CardRoundsSection.toString();
+
+    assert(source.includes("round.placements.map"));
+    assert(!source.includes("StatusBadge"));
+    assert(!source.includes("placements</"));
+  });
+
+  it("uses icon-only controls for sports match actions", async () => {
+    const { SportsMatchesSection } = await import("@/components/sessions/sports-matches-section");
+    const source = SportsMatchesSection.toString();
+
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("PlusIcon"));
+    assert(source.includes("PencilIcon"));
+    assert(source.includes("TrashIcon"));
+  });
+
+  it("highlights sports match winners without winner badges", async () => {
+    const { SportsMatchesSection } = await import("@/components/sessions/sports-matches-section");
+    const source = SportsMatchesSection.toString();
+
+    assert(source.includes("winningSideNumber"));
+    assert(source.includes("TrophyIcon"));
+    assert(!source.includes("Winner: Side"));
+    assert(!source.includes("StatusBadge"));
+  });
+
+  it("renders sports scores alongside match sides", async () => {
+    const { SportsMatchesSection } = await import("@/components/sessions/sports-matches-section");
+    const source = SportsMatchesSection.toString();
+
+    assert(source.includes("getScoreColumns"));
+    assert(source.includes("gridTemplateColumns"));
+    assert(source.includes("minmax(0, 1fr)"));
+    assert(source.includes("Set"));
+    assert(!source.includes("min-w-[28rem]"));
+    assert(!source.includes("Score:"));
+  });
+
+  it("summarizes sports sessions with match wins", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("buildSportsSessionSummary"));
+    assert(source.includes("matchWins"));
+    assert(source.includes("Match wins"));
   });
 });

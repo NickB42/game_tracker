@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { GroupForm } from "@/components/groups/group-form";
-import { PageHeader } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateGroup } from "@/lib/domain/authorization";
 import { getAllPlayers } from "@/lib/db/players";
@@ -21,11 +21,11 @@ export default async function NewGroupPage() {
     <section className="space-y-6">
       <PageHeader
         title="Create group"
-        description="Create a group and optionally assign existing players as members."
         actions={
-          <Link className="app-button app-button-secondary" href="/dashboard/groups">
-            Back to groups
-          </Link>
+          <AppButton href="/dashboard/groups" variant="secondary" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to groups</span>
+          </AppButton>
         }
       />
 

@@ -79,6 +79,16 @@ describe("Groups page - ResponsiveList integration", () => {
     assert(source.includes("canCreateGroup"));
   });
 
+  it("uses one icon-only group create action", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/groups/page");
+    const source = module.default.toString();
+
+    assert(source.includes("groups-create-link"));
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("PlusIcon"));
+    assert(!source.includes("Create group"));
+  });
+
   it("uses desktopHeaders prop for table headers", async () => {
     const module = await import("@/app/(dashboard)/dashboard/groups/page");
     const source = module.default.toString();
@@ -135,5 +145,50 @@ describe("Groups page - Component structure validation", () => {
 
     assert(source.includes("canCreateGroup"));
     assert(source.includes("canEditGroup"));
+  });
+});
+
+describe("Group detail page - mobile layout", () => {
+  it("does not render an activity badge in the header", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = module.default.toString();
+
+    assert(!source.includes("ActivityBadge"));
+    assert(source.includes("formatActivityType"));
+  });
+
+  it("hides stat cards on mobile", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("hidden md:grid"));
+    assert(source.includes("StatCard"));
+  });
+
+  it("keeps trusted admins as desktop supporting content", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("hidden md:block"));
+    assert(source.includes("Trusted admins"));
+  });
+
+  it("keeps members visible as primary group content", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("Members"));
+    assert(source.includes("groupRecord.memberships.map"));
+  });
+
+  it("uses icon-only header actions and plain activity text", async () => {
+    const module = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
+    const source = module.default.toString();
+
+    assert(source.includes("app-icon-button"));
+    assert(source.includes("ArrowLeftIcon"));
+    assert(source.includes("TrophyIcon"));
+    assert(source.includes("PencilIcon"));
+    assert(source.includes("formatActivityType"));
   });
 });
