@@ -216,6 +216,8 @@ model GameSession {
   @@index([createdByUserId])
   @@index([playedAt])
   @@index([archivedAt])
+  @@index([groupId, playedAt])
+  @@index([activityType, archivedAt, playedAt])
 }
 
 model Match {
@@ -346,6 +348,7 @@ model OnlineGame {
   privateStateJson      Json
   eliminationOrderJson  Json
   loserUserId           String?
+  winnerUserId          String?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
@@ -432,6 +435,7 @@ model RoundResult {
   @@unique([gameSessionId, sequenceNumber])
   @@index([gameSessionId])
   @@index([archivedAt])
+  @@index([gameSessionId, archivedAt])
 }
 
 model RoundPlacement {

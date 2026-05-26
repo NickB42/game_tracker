@@ -158,22 +158,23 @@ export async function updateGroupAction(
     const group = await prisma.$transaction(async (tx) => {
       const updated = await updateGroup(parsed.data, tx);
 
-      await setGroupTrustedAdmins(
-        {
-          groupId: updated.id,
-          ownerUserId: updated.ownerUserId,
-          trustedAdminUserIds: parsed.data.trustedAdminUserIds,
-        },
-        tx,
-      );
-
-      await setGroupMembers(
-        {
-          groupId: updated.id,
-          playerIds: parsed.data.playerIds,
-        },
-        tx,
-      );
+      await Promise.all([
+        setGroupTrustedAdmins(
+          {
+            groupId: updated.id,
+            ownerUserId: updated.ownerUserId,
+            trustedAdminUserIds: parsed.data.trustedAdminUserIds,
+          },
+          tx,
+        ),
+        setGroupMembers(
+          {
+            groupId: updated.id,
+            playerIds: parsed.data.playerIds,
+          },
+          tx,
+        ),
+      ]);
 
       return updated;
     });
@@ -206,5 +207,7 @@ export async function updateGroupAction(
 
   revalidatePath("/dashboard/groups");
   revalidatePath(`/dashboard/groups/${groupIdFromUpdate}`);
+  revalidatePath("/dashboard/sessions");
+  revalidatePath(`/dashboard/leaderboards/groups/${groupIdFromUpdate}`);
   redirect(`/dashboard/groups/${groupIdFromUpdate}`);
 }

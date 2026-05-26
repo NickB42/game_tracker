@@ -79,11 +79,13 @@ type GameSessionDetailPageProps = {
   }>;
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
+  return dateFormatter.format(value);
 }
 
 export default async function GameSessionDetailPage({ params, searchParams }: GameSessionDetailPageProps) {

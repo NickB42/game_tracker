@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditGroup } from "@/lib/domain/authorization";
 import { getGroupAuthorizationContext, getGroupById } from "@/lib/db/groups";
-import { getPlayers } from "@/lib/db/players";
+import { getAllPlayers } from "@/lib/db/players";
 import { getAssignableUsers } from "@/lib/db/users";
 
 type EditGroupPageProps = {
@@ -22,7 +22,7 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
   const [groupContext, group, players, users] = await Promise.all([
     getGroupAuthorizationContext(id, user),
     getGroupById(id, user),
-    getPlayers({ includeInactive: true }),
+    getAllPlayers({ includeInactive: true }),
     getAssignableUsers(user),
   ]);
 

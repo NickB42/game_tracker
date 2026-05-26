@@ -93,6 +93,9 @@ async function appendEvent(
   });
 }
 
+const CLEANUP_DEBOUNCE_MS = 60_000;
+let lastCleanupAt = 0;
+
 async function cleanupExpiredLobbies(db: Db) {
   const candidates = await db.onlineLobby.findMany({
     where: {
@@ -108,41 +111,59 @@ async function cleanupExpiredLobbies(db: Db) {
     },
   });
 
+  const clearEmptySinceIds: string[] = [];
+  const markEmptyIds: string[] = [];
+  const expiredLobbies: typeof candidates = [];
+
   for (const lobby of candidates) {
     const hasActivePlayers = lobby.players.length > 0;
 
     if (hasActivePlayers && lobby.emptySince) {
-      await db.onlineLobby.update({
-        where: { id: lobby.id },
-        data: { emptySince: null },
-      });
-      continue;
-    }
-
-    if (!hasActivePlayers && !lobby.emptySince) {
-      await db.onlineLobby.update({
-        where: { id: lobby.id },
-        data: { emptySince: now() },
-      });
-      continue;
-    }
-
-    if (isLobbyExpired(lobby)) {
-      await db.onlineLobby.update({
-        where: { id: lobby.id },
-        data: {
-          status: "CLOSED",
-          closedAt: now(),
-        },
-      });
-
-      await appendEvent(db, {
-        lobbyId: lobby.id,
-        type: "lobby_closed_timeout",
-        payload: { reason: "empty_timeout" },
-      });
+      clearEmptySinceIds.push(lobby.id);
+    } else if (!hasActivePlayers && !lobby.emptySince) {
+      markEmptyIds.push(lobby.id);
+    } else if (isLobbyExpired(lobby)) {
+      expiredLobbies.push(lobby);
     }
   }
+
+  if (clearEmptySinceIds.length > 0) {
+    await db.onlineLobby.updateMany({
+      where: { id: { in: clearEmptySinceIds } },
+      data: { emptySince: null },
+    });
+  }
+
+  if (markEmptyIds.length > 0) {
+    await db.onlineLobby.updateMany({
+      where: { id: { in: markEmptyIds } },
+      data: { emptySince: now() },
+    });
+  }
+
+  if (expiredLobbies.length > 0) {
+    await db.onlineLobby.updateMany({
+      where: { id: { in: expiredLobbies.map((l) => l.id) } },
+      data: { status: "CLOSED", closedAt: now() },
+    });
+
+    await Promise.all(
+      expiredLobbies.map((lobby) =>
+        appendEvent(db, {
+          lobbyId: lobby.id,
+          type: "lobby_closed_timeout",
+          payload: { reason: "empty_timeout" },
+        }),
+      ),
+    );
+  }
+}
+
+async function maybeCleanupExpiredLobbies(db: Db) {
+  const elapsed = Date.now() - lastCleanupAt;
+  if (elapsed < CLEANUP_DEBOUNCE_MS) return;
+  lastCleanupAt = Date.now();
+  await cleanupExpiredLobbies(db);
 }
 
 async function getActiveLobbyPlayers(db: Db, lobbyId: string) {
@@ -192,7 +213,7 @@ function nextSeatIndex(players: Array<{ seatIndex: number }>) {
 
 function buildPublicStateForViewer(envelope: PersistedGameEnvelope, viewerUserId: string) {
   const effectivePile = getEffectivePileState(envelope.game.discardPile);
-  const legalMoves = envelope.game.phase === "active" ? getLegalMoves(envelope.game, viewerUserId) : [];
+  const legalMoves = envelope.game.phase === "active" ? getLegalMoves(envelope.game, viewerUserId, { maxCombinationSize: 4 }) : [];
   const currentPlayer = envelope.game.players.find((player) => player.seatIndex === envelope.game.currentPlayerSeatIndex);
   const burnedPileHistory = Array.isArray(envelope.game.burnedPileHistory) ? envelope.game.burnedPileHistory : [];
 
@@ -206,7 +227,8 @@ function buildPublicStateForViewer(envelope: PersistedGameEnvelope, viewerUserId
     discardPileSize: envelope.game.discardPile.length,
     effectivePile,
     burnedCardsCount: envelope.game.burnedCards.length,
-    burnedPileHistory,
+    burnedPileCount: burnedPileHistory.length,
+    lastBurnedPile: burnedPileHistory.length > 0 ? burnedPileHistory[burnedPileHistory.length - 1] : null,
     eliminationOrder: envelope.game.eliminationOrder,
     loserUserId: envelope.game.loserUserId,
     swapLockedUserIds: envelope.swapLockedUserIds,
@@ -225,26 +247,28 @@ function getWinnerUserIdFromEnvelope(envelope: PersistedGameEnvelope): string | 
 }
 
 async function syncOnlineGamePlayers(db: Db, gameId: string, envelope: PersistedGameEnvelope) {
-  for (const player of envelope.game.players) {
-    await db.onlineGamePlayer.updateMany({
-      where: {
-        gameId,
-        userId: player.userId,
-      },
-      data: {
-        handCount: player.hand.length,
-        faceDownCount: player.tableFaceDown.length,
-        faceUpCardsJson: toJson(player.tableFaceUp),
-        status: player.isLoser ? "LOST" : player.isOut ? "OUT" : "ACTIVE",
-        placement: player.placement,
-        privateStateJson: toJson({
-          hand: player.hand,
-          tableFaceDown: player.tableFaceDown,
-          tableFaceUp: player.tableFaceUp,
-        }),
-      },
-    });
-  }
+  await Promise.all(
+    envelope.game.players.map((player) =>
+      db.onlineGamePlayer.updateMany({
+        where: {
+          gameId,
+          userId: player.userId,
+        },
+        data: {
+          handCount: player.hand.length,
+          faceDownCount: player.tableFaceDown.length,
+          faceUpCardsJson: toJson(player.tableFaceUp),
+          status: player.isLoser ? "LOST" : player.isOut ? "OUT" : "ACTIVE",
+          placement: player.placement,
+          privateStateJson: toJson({
+            hand: player.hand,
+            tableFaceDown: player.tableFaceDown,
+            tableFaceUp: player.tableFaceUp,
+          }),
+        },
+      }),
+    ),
+  );
 }
 
 async function getLobbyDebugOptions(db: Db, lobbyId: string): Promise<{ debugShortDeck: boolean }> {
@@ -273,8 +297,9 @@ async function getLobbyDebugOptions(db: Db, lobbyId: string): Promise<{ debugSho
 }
 
 export async function createOnlineLobby(ownerUserId: string, options?: { debugShortDeck?: boolean }) {
+  await maybeCleanupExpiredLobbies(prisma);
+
   return prisma.$transaction(async (tx) => {
-    await cleanupExpiredLobbies(tx);
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const code = generateLobbyCode();
@@ -322,9 +347,9 @@ export async function createOnlineLobby(ownerUserId: string, options?: { debugSh
 }
 
 export async function joinOnlineLobbyByCode(userId: string, code: string) {
-  return prisma.$transaction(async (tx) => {
-    await cleanupExpiredLobbies(tx);
+  await maybeCleanupExpiredLobbies(prisma);
 
+  return prisma.$transaction(async (tx) => {
     const lobby = await tx.onlineLobby.findUnique({
       where: { code },
     });
@@ -397,9 +422,9 @@ export async function joinOnlineLobbyByCode(userId: string, code: string) {
 }
 
 export async function leaveOnlineLobby(userId: string, lobbyId: string) {
-  return prisma.$transaction(async (tx) => {
-    await cleanupExpiredLobbies(tx);
+  await maybeCleanupExpiredLobbies(prisma);
 
+  return prisma.$transaction(async (tx) => {
     const lobby = await tx.onlineLobby.findUnique({
       where: { id: lobbyId },
     });
@@ -787,6 +812,7 @@ export async function applyOnlineMove(userId: string, lobbyId: string, move: Pla
         discardPileState: toJson(envelope.game.discardPile),
         eliminationOrderJson: toJson(envelope.game.eliminationOrder),
         loserUserId: envelope.game.loserUserId,
+        winnerUserId: envelope.game.phase === "finished" ? getWinnerUserIdFromEnvelope(envelope) : null,
         currentTurnPlayerId: currentPlayer?.userId ?? null,
         status: envelope.game.phase === "finished" ? "FINISHED" : "IN_PROGRESS",
         finishedAt: envelope.game.phase === "finished" ? now() : null,
@@ -836,7 +862,6 @@ export async function applyOnlineMove(userId: string, lobbyId: string, move: Pla
 }
 
 export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: string) {
-  await cleanupExpiredLobbies(prisma);
 
   const lobby = await prisma.onlineLobby.findUnique({
     where: { id: lobbyId },
@@ -889,7 +914,7 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
     orderBy: { createdAt: "desc" },
     take: 200,
     select: {
-      privateStateJson: true,
+      winnerUserId: true,
     },
   });
 
@@ -898,7 +923,7 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
   let lastWinnerUserId: string | null = null;
 
   for (const [index, game] of finishedGames.entries()) {
-    const winnerUserId = getWinnerUserIdFromEnvelope(getEnvelope(game.privateStateJson));
+    const winnerUserId = game.winnerUserId;
 
     if (!winnerUserId) {
       continue;
@@ -1003,7 +1028,7 @@ export async function getOnlineLobbySnapshot(lobbyId: string, viewerUserId: stri
 }
 
 export async function listOpenOnlineLobbies() {
-  await cleanupExpiredLobbies(prisma);
+  await maybeCleanupExpiredLobbies(prisma);
 
   const lobbies = await prisma.onlineLobby.findMany({
     where: {

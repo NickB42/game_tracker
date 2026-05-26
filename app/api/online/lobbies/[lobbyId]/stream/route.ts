@@ -8,7 +8,7 @@ function sseData(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ lobbyId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ lobbyId: string }> }) {
   const user = await requireApiAuthenticatedUser();
 
   if (!user) {
@@ -31,17 +31,20 @@ export async function GET(_request: Request, context: { params: Promise<{ lobbyI
     return new Response("Forbidden", { status: 403 });
   }
 
+  const signal = request.signal;
+
   const stream = new ReadableStream({
     async start(controller) {
-      let closed = false;
       const encoder = new TextEncoder();
       let iterations = 0;
 
-      while (!closed && iterations < 15) {
+      while (!signal.aborted && iterations < 15) {
         try {
           const snapshot = await getOnlineLobbySnapshot(lobbyId, user.id);
+          if (signal.aborted) break;
           controller.enqueue(encoder.encode(sseData("snapshot", snapshot)));
         } catch (error) {
+          if (signal.aborted) break;
           const message = error instanceof Error ? error.message : "Failed to stream snapshot";
           controller.enqueue(encoder.encode(sseData("error", { message })));
         }
@@ -49,12 +52,17 @@ export async function GET(_request: Request, context: { params: Promise<{ lobbyI
         iterations += 1;
 
         await new Promise((resolve) => {
-          setTimeout(resolve, 2_000);
+          const timer = setTimeout(resolve, 2_000);
+          signal.addEventListener("abort", () => { clearTimeout(timer); resolve(undefined); }, { once: true });
         });
       }
 
-      closed = true;
-      controller.close();
+      if (!signal.aborted) {
+        controller.close();
+      }
+    },
+    cancel() {
+      // Client disconnected — loop will exit via signal.aborted check
     },
   });
 

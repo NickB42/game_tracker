@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { LobbySnapshot } from "@/components/online/types";
 import { useToast } from "@/components/ui/toast";
@@ -42,47 +42,68 @@ export function LobbyLiveView({
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastErrorRef = useRef<string | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const backoffRef = useRef(2_000);
+
+  const isTerminal = snapshot.lobby.status === "FINISHED" || snapshot.lobby.status === "CLOSED";
+
+  const fetchSnapshot = useCallback(async () => {
+    setIsRefreshing(true);
+
+    try {
+      const response = await fetch(`/api/online/lobbies/${lobbyId}`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh lobby state.");
+      }
+
+      const data = (await response.json()) as LobbySnapshot;
+      setSnapshot(data);
+      setError(null);
+      backoffRef.current = 2_000;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed to refresh.");
+      backoffRef.current = Math.min(backoffRef.current * 2, 30_000);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [lobbyId]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (isTerminal) return;
 
-    const fetchSnapshot = async () => {
-      setIsRefreshing(true);
+    function startPolling() {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(fetchSnapshot, backoffRef.current);
+    }
 
-      try {
-        const response = await fetch(`/api/online/lobbies/${lobbyId}`, {
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to refresh lobby state.");
-        }
-
-        const data = (await response.json()) as LobbySnapshot;
-
-        if (!cancelled) {
-          setSnapshot(data);
-          setError(null);
-        }
-      } catch (cause) {
-        if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : "Failed to refresh.");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsRefreshing(false);
-        }
+    function stopPolling() {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    };
+    }
+
+    function handleVisibility() {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        fetchSnapshot();
+        startPolling();
+      }
+    }
 
     fetchSnapshot();
-    const poll = setInterval(fetchSnapshot, 2_000);
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      cancelled = true;
-      clearInterval(poll);
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [lobbyId]);
+  }, [lobbyId, isTerminal, fetchSnapshot]);
 
   useEffect(() => {
     if (!error || error === lastErrorRef.current) {

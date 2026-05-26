@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
-import { getPlayers } from "@/lib/db/players";
+import { getAllPlayers } from "@/lib/db/players";
 import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 import { getAssignableUsers } from "@/lib/db/users";
 
@@ -35,7 +35,7 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
     getGameSessionById(id, user),
     getGameSessionAuthorizationContext(id, user),
     getGroups(user),
-    getPlayers({ includeInactive: true }),
+    getAllPlayers({ includeInactive: true }),
     getAssignableUsers(user),
   ]);
 

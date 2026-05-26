@@ -401,7 +401,7 @@ function isCardLegalAgainstPile(card: Card, effectivePile: EffectivePileState): 
   return compareRankAsc(card.rank, effectivePile.rankRestriction) >= 0;
 }
 
-function cardCombinationsByRank(cards: Card[]): Card[][] {
+function cardCombinationsByRank(cards: Card[], maxSize?: number): Card[][] {
   const byRank = new Map<CardRank, Card[]>();
 
   for (const card of cards) {
@@ -426,7 +426,8 @@ function cardCombinationsByRank(cards: Card[]): Card[][] {
   }
 
   for (const rankCards of byRank.values()) {
-    for (let size = 1; size <= rankCards.length; size += 1) {
+    const limit = maxSize ? Math.min(maxSize, rankCards.length) : rankCards.length;
+    for (let size = 1; size <= limit; size += 1) {
       collectCombinations(rankCards, size, 0, []);
     }
   }
@@ -546,7 +547,7 @@ function toMoveKey(cardIds: string[]): string {
   return cardIds.slice().sort().join("|");
 }
 
-export function getLegalMoves(state: GameState, actingUserId?: string): LegalMove[] {
+export function getLegalMoves(state: GameState, actingUserId?: string, options?: { maxCombinationSize?: number }): LegalMove[] {
   if (state.phase !== "active") {
     return [];
   }
@@ -582,7 +583,7 @@ export function getLegalMoves(state: GameState, actingUserId?: string): LegalMov
   const legal: LegalMove[] = [];
   const seen = new Set<string>();
 
-  for (const combo of cardCombinationsByRank(cards)) {
+  for (const combo of cardCombinationsByRank(cards, options?.maxCombinationSize)) {
     const representative = combo[0];
     const isDirectFourBurn = combo.length === 4;
 

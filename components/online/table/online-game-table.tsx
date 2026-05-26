@@ -542,7 +542,7 @@ export function OnlineGameTable({
             enabled={isMyTurn && publicState.phase === "active" && !isSubmittingMove}
             isLegalDragOver={isDiscardLegalHover}
             isPulseActive={burnPulse}
-            burnedPileHistory={publicState.burnedPileHistory ?? []}
+            burnedPileHistory={publicState.lastBurnedPile ? [publicState.lastBurnedPile] : []}
           />
 
           <div className="flex flex-wrap items-center gap-2">

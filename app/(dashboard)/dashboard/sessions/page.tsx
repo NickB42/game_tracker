@@ -11,6 +11,7 @@ import {
   buildSessionsHref,
   parseSessionsActivityFilter,
   type SessionsActivityFilter,
+  type SessionsFilterState,
 } from "@/lib/sessions/filter-state";
 
 type SessionListRow = {
@@ -30,37 +31,47 @@ type SessionListRow = {
   };
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function formatDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
+  return dateFormatter.format(value);
 }
 
 type SessionsPageProps = {
   searchParams: Promise<{
     activity?: string;
     groupId?: string;
+    page?: string;
   }>;
 };
 
 export default async function SessionsPage({ searchParams }: SessionsPageProps) {
   const user = await requireAuthenticatedUser();
-  const { activity, groupId } = await searchParams;
+  const { activity, groupId, page: pageParam } = await searchParams;
   const activityFilter = parseSessionsActivityFilter(activity);
+  const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
-  const groups = await getGroups(user);
-  const selectedGroupId = groupId && groups.some((group) => group.id === groupId) ? groupId : undefined;
+  const rawGroupId = groupId ?? undefined;
+
+  const [groups, { sessions: rawSessions, hasNextPage }] = await Promise.all([
+    getGroups(user),
+    getGameSessions(user, {
+      activityType: activityFilter === "ALL" ? undefined : activityFilter,
+      groupId: rawGroupId,
+      page: currentPage,
+    }),
+  ]);
+
+  const validGroupId = rawGroupId && groups.some((group) => group.id === rawGroupId) ? rawGroupId : undefined;
+  const sessions = rawSessions as unknown as SessionListRow[];
 
   const selectableGroups =
     activityFilter === "ALL"
       ? groups
       : groups.filter((group) => group.activityType === activityFilter);
-
-  const sessions = (await getGameSessions(user, {
-    activityType: activityFilter === "ALL" ? undefined : activityFilter,
-    groupId: selectedGroupId,
-  })) as unknown as SessionListRow[];
 
   const latestSessionForActivity =
     activityFilter === "ALL"
@@ -69,11 +80,8 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
 
   const activeFilterState = {
     activity: activityFilter,
-    groupId: selectedGroupId,
-  } as {
-    activity: SessionsActivityFilter;
-    groupId?: string;
-  };
+    groupId: validGroupId,
+  } as SessionsFilterState;
 
   const quickCreateHref = buildNewSessionHref(activeFilterState);
   const returnTo = encodeURIComponent(buildSessionsHref(activeFilterState));
@@ -111,9 +119,9 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
                 href={buildSessionsHref({
                   activity: entry.value as SessionsActivityFilter,
                   groupId:
-                    selectedGroupId &&
-                    (entry.value === "ALL" || selectableGroups.some((group) => group.id === selectedGroupId))
-                      ? selectedGroupId
+                    validGroupId &&
+                    (entry.value === "ALL" || selectableGroups.some((group) => group.id === validGroupId))
+                      ? validGroupId
                       : undefined,
                 })}
                 className={`app-button ${activityFilter === entry.value ? "app-button-primary" : "app-button-ghost"}`}
@@ -130,7 +138,7 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
           <label htmlFor="groupId" className="text-sm text-[var(--text-secondary)]">
             Group
           </label>
-          <select id="groupId" name="groupId" defaultValue={selectedGroupId ?? ""} className="app-select min-w-44">
+          <select id="groupId" name="groupId" defaultValue={validGroupId ?? ""} className="app-select min-w-44">
             <option value="">All groups</option>
             {selectableGroups.map((group) => (
               <option key={group.id} value={group.id}>
@@ -226,6 +234,32 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
             </tbody>
           </table>
         </DataTable>
+      )}
+
+      {(currentPage > 1 || hasNextPage) && (
+        <div className="flex items-center justify-between pt-2">
+          {currentPage > 1 ? (
+            <Link
+              className="app-button app-button-secondary"
+              href={buildSessionsHref({ ...activeFilterState, page: currentPage - 1 })}
+            >
+              Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-sm text-[var(--text-muted)]">Page {currentPage}</span>
+          {hasNextPage ? (
+            <Link
+              className="app-button app-button-secondary"
+              href={buildSessionsHref({ ...activeFilterState, page: currentPage + 1 })}
+            >
+              Next
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
       )}
     </section>
   );

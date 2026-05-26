@@ -5,7 +5,7 @@ import {
   type AuthorizationActor,
   type SessionAuthorizationContext,
 } from "@/lib/domain/authorization";
-import { GROUP_LOCK_MESSAGE, PARTICIPANTS_LOCK_MESSAGE, getSessionEditLockReasons } from "@/lib/domain/safety";
+import { GROUP_LOCK_MESSAGE, PARTICIPANTS_LOCK_MESSAGE, getSessionEditLockReasons, getSessionEditLockReasonsFromCounts } from "@/lib/domain/safety";
 import { prisma } from "@/lib/db/prisma";
 import type { GameSessionInput, GameSessionUpdateInput, SessionParticipantsUpdateInput } from "@/lib/validation/session";
 
@@ -59,11 +59,13 @@ async function assertPlayersExist(playerIds: string[], db: Prisma.TransactionCli
 
 export async function getGameSessions(
   actor: AuthorizationActor,
-  options?: { includeArchived?: boolean; activityType?: ActivityType; groupId?: string },
+  options?: { includeArchived?: boolean; activityType?: ActivityType; groupId?: string; page?: number; pageSize?: number },
 ) {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 25;
   const visibilityWhere = buildSessionVisibilityWhere(actor);
 
-  return prisma.gameSession.findMany({
+  const rows = await prisma.gameSession.findMany({
     where: {
       ...(options?.includeArchived ? {} : { archivedAt: null }),
       ...(options?.activityType ? { activityType: options.activityType } : {}),
@@ -71,6 +73,8 @@ export async function getGameSessions(
       ...visibilityWhere,
     },
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
+    take: pageSize + 1,
+    skip: (page - 1) * pageSize,
     include: {
       group: {
         select: {
@@ -109,6 +113,11 @@ export async function getGameSessions(
       },
     },
   });
+
+  const hasNextPage = rows.length > pageSize;
+  const sessions = hasNextPage ? rows.slice(0, pageSize) : rows;
+
+  return { sessions, hasNextPage, page, pageSize };
 }
 
 export async function getGameSessionById(id: string, actor: AuthorizationActor) {
@@ -258,7 +267,7 @@ export async function updateGameSession(input: GameSessionUpdateInput, tx?: Pris
     throw new Error("Activity cannot be changed after rounds or matches have been recorded for this session.");
   }
 
-  const lockReasons = await getSessionEditLockReasons(input.id, db);
+  const lockReasons = getSessionEditLockReasonsFromCounts(existing._count);
 
   if (lockReasons.groupLocked && existing.groupId !== input.groupId) {
     throw new Error(GROUP_LOCK_MESSAGE);

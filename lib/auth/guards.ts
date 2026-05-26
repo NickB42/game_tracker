@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -13,7 +14,7 @@ export type AuthenticatedUser = {
   mustChangePassword: boolean;
 };
 
-export async function requireAuthenticatedUser(): Promise<AuthenticatedUser> {
+export const requireAuthenticatedUser = cache(async (): Promise<AuthenticatedUser> => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -39,9 +40,9 @@ export async function requireAuthenticatedUser(): Promise<AuthenticatedUser> {
   }
 
   return user;
-}
+});
 
-export async function isCurrentUserAdmin(): Promise<boolean> {
+export const isCurrentUserAdmin = cache(async (): Promise<boolean> => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -56,7 +57,7 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
   });
 
   return user?.role === "ADMIN";
-}
+});
 
 export async function requireAdminUser() {
   const user = await requireAuthenticatedUser();

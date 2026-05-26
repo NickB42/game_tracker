@@ -86,6 +86,8 @@ export async function updatePlayerAction(
 
     revalidatePath("/dashboard/players");
     revalidatePath(`/dashboard/players/${player.id}`);
+    revalidatePath("/dashboard/sessions");
+    revalidatePath("/dashboard/leaderboards");
     redirect(`/dashboard/players/${player.id}`);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
