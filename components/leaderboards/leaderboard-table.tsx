@@ -1,4 +1,5 @@
 import type { ActivityType } from "@prisma/client";
+import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/primitives";
 import { ResponsiveList } from "@/components/ui/responsive-list";
@@ -62,9 +63,9 @@ export function LeaderboardTable({ rows, activityType, scopeLabel }: Leaderboard
         <tr key={row.playerId}>
           <td>{index + 1}</td>
           <td className="font-medium text-[var(--text-primary)]">
-            <a className="app-button app-button-ghost" href={`/dashboard/players/${row.playerId}`}>
+            <Link className="app-button app-button-ghost" href={`/dashboard/players/${row.playerId}`}>
               {row.playerDisplayName}
-            </a>
+            </Link>
           </td>
           <td>{row.displayedRating.toFixed(2)}</td>
           {isCard ? (

@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ListItemCard } from '@/components/ui/list-item-card'
-import { StatusBadge } from '@/components/ui/primitives'
 
 interface PlayerCardProps {
   player: {

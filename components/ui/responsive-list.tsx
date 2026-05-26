@@ -12,8 +12,8 @@ interface ResponsiveListProps<T> {
 }
 
 /**
- * Renders mobile-optimized cards below 880px breakpoint,
- * and a desktop table above 880px.
+ * Renders mobile-optimized cards below the md breakpoint (768px by default),
+ * and a desktop table at and above the md breakpoint.
  * Single data source, dual presentation.
  */
 export function ResponsiveList<T extends { id?: string; [key: string]: any }>({
@@ -33,14 +33,14 @@ export function ResponsiveList<T extends { id?: string; [key: string]: any }>({
     <>
       {heading && <h2 className="text-lg font-semibold mb-4">{heading}</h2>}
 
-      {/* Mobile: Stacked cards (visible below 880px) */}
+      {/* Mobile: Stacked cards (visible below md breakpoint) */}
       <div className="md:hidden space-y-2" data-testid={testId ? `${testId}-mobile` : undefined}>
         {data.map((item, index) => (
           <div key={item.id || index}>{mobile(item, index)}</div>
         ))}
       </div>
 
-      {/* Desktop: Table (visible at 880px and above) */}
+      {/* Desktop: Table (visible at and above md breakpoint) */}
       <div className="hidden md:block" data-testid={testId ? `${testId}-desktop` : undefined}>
         <DataTable>
           <table className="app-table w-full" data-testid={testId ? `${testId}-table` : undefined}>

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { ActivityBadge } from './activity-badge'
 import { ListItemCard } from '@/components/ui/list-item-card'
 
 interface SessionCardProps {
