@@ -1,5 +1,5 @@
-import type { ActivityType } from "@prisma/client";
 import Link from "next/link";
+import type { ActivityType } from "@prisma/client";
 
 import { EmptyState } from "@/components/ui/primitives";
 import { ResponsiveList } from "@/components/ui/responsive-list";
