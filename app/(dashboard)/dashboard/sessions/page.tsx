@@ -1,7 +1,9 @@
 import Link from "next/link";
 
 import { ActivityBadge } from "@/components/sessions/activity-badge";
-import { AppButton, DataTable, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
+import { SessionCard } from "@/components/sessions/session-card";
+import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
+import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateSession, canEditSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
@@ -180,60 +182,64 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
           action={canCreateSession(user) ? <AppButton href={quickCreateHref}>Create Session</AppButton> : null}
         />
       ) : (
-        <DataTable>
-          <table className="app-table min-w-full">
-            <thead>
-              <tr>
-                <th>Played at</th>
-                <th>Title</th>
-                <th>Activity</th>
-                <th>Group</th>
-                <th>Participants</th>
-                <th>Results</th>
-                <th>Last update</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((session) => (
-                <tr key={session.id}>
-                  <td className="whitespace-nowrap">{formatDateTime(session.playedAt)}</td>
-                  <td className="font-medium text-[var(--text-primary)]">{session.title ?? "Untitled session"}</td>
-                  <td>
-                    <ActivityBadge activityType={session.activityType} />
-                  </td>
-                  <td>{session.group?.name ?? "No group"}</td>
-                  <td>{session._count.participants}</td>
-                  <td>{formatResultCount(session)}</td>
-                  <td className="whitespace-nowrap">{formatDateTime(session.updatedAt)}</td>
-                  <td>
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        className="app-button app-button-ghost"
-                        href={`/dashboard/sessions/${session.id}?returnTo=${returnTo}`}
-                        data-testid={`session-row-open-${session.id}`}
-                      >
-                        View
-                      </Link>
-                      {canEditSession(user, {
-                        isOwner: session.ownerUserId === user.id,
-                        isTrustedAdmin: session.trustedAdmins.length > 0,
-                        isParticipant: false,
-                        isLinkedGroupOwner: false,
-                        isLinkedGroupTrustedAdmin: false,
-                        isLinkedGroupMember: false,
-                      }) ? (
-                        <Link className="app-button app-button-secondary" href={`/dashboard/sessions/${session.id}/edit`}>
-                          Edit
-                        </Link>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTable>
+        <ResponsiveList
+          data={sessions}
+          testId="sessions-list"
+          desktopHeaders={
+            <tr>
+              <th>Played at</th>
+              <th>Title</th>
+              <th>Activity</th>
+              <th>Group</th>
+              <th>Participants</th>
+              <th>Results</th>
+              <th>Last update</th>
+              <th>Actions</th>
+            </tr>
+          }
+          mobile={(session) => (
+            <SessionCard
+              session={session}
+              returnTo={returnTo}
+            />
+          )}
+          desktop={(session) => (
+            <tr key={session.id}>
+              <td className="whitespace-nowrap">{formatDateTime(session.playedAt)}</td>
+              <td className="font-medium text-[var(--text-primary)]">{session.title ?? "Untitled session"}</td>
+              <td>
+                <ActivityBadge activityType={session.activityType} />
+              </td>
+              <td>{session.group?.name ?? "No group"}</td>
+              <td>{session._count.participants}</td>
+              <td>{formatResultCount(session)}</td>
+              <td className="whitespace-nowrap">{formatDateTime(session.updatedAt)}</td>
+              <td>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    className="app-button app-button-ghost"
+                    href={`/dashboard/sessions/${session.id}?returnTo=${returnTo}`}
+                    data-testid={`session-row-open-${session.id}`}
+                  >
+                    View
+                  </Link>
+                  {canEditSession(user, {
+                    isOwner: session.ownerUserId === user.id,
+                    isTrustedAdmin: session.trustedAdmins.length > 0,
+                    isParticipant: false,
+                    isLinkedGroupOwner: false,
+                    isLinkedGroupTrustedAdmin: false,
+                    isLinkedGroupMember: false,
+                  }) ? (
+                    <Link className="app-button app-button-secondary" href={`/dashboard/sessions/${session.id}/edit`}>
+                      Edit
+                    </Link>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       )}
 
       {(currentPage > 1 || hasNextPage) && (

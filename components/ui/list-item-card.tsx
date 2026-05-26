@@ -32,7 +32,7 @@ export function ListItemCard({
   return (
     <Wrapper
       {...wrapperProps}
-      className="app-card group cursor-pointer active:scale-95 transition-transform active:duration-75"
+      className="app-card group cursor-pointer active:scale-95 transition-transform active:duration-75 p-4"
     >
       {/* Header: title, badge, actions */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -63,7 +63,7 @@ export function ListItemCard({
       {stats && stats.length > 0 && (
         <div
           className={`grid gap-3 pt-3 border-t border-text-muted/20 ${
-            stats.length >= 4 ? 'grid-cols-2' : 'grid-cols-1'
+            stats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'
           }`}
         >
           {stats.map(({ label, value }) => (
