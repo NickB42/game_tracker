@@ -42,29 +42,16 @@ export function LobbyLiveView({
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastErrorRef = useRef<string | null>(null);
-  const pollBackoffMsRef = useRef(2_000);
 
   useEffect(() => {
     let cancelled = false;
-    let pollTimeout: ReturnType<typeof setTimeout> | null = null;
-    let activeController: AbortController | null = null;
-
-    const scheduleNextPoll = () => {
-      if (cancelled) {
-        return;
-      }
-
-      pollTimeout = setTimeout(fetchSnapshot, pollBackoffMsRef.current);
-    };
 
     const fetchSnapshot = async () => {
-      activeController = new AbortController();
       setIsRefreshing(true);
 
       try {
         const response = await fetch(`/api/online/lobbies/${lobbyId}`, {
           cache: "no-store",
-          signal: activeController.signal,
         });
 
         if (!response.ok) {
@@ -76,33 +63,24 @@ export function LobbyLiveView({
         if (!cancelled) {
           setSnapshot(data);
           setError(null);
-          pollBackoffMsRef.current = 2_000;
         }
       } catch (cause) {
-        if (cause instanceof DOMException && cause.name === "AbortError") {
-          return;
-        }
-
         if (!cancelled) {
           setError(cause instanceof Error ? cause.message : "Failed to refresh.");
-          pollBackoffMsRef.current = Math.min(pollBackoffMsRef.current * 2, 30_000);
         }
       } finally {
         if (!cancelled) {
           setIsRefreshing(false);
-          scheduleNextPoll();
         }
       }
     };
 
     fetchSnapshot();
+    const poll = setInterval(fetchSnapshot, 2_000);
 
     return () => {
       cancelled = true;
-      activeController?.abort();
-      if (pollTimeout) {
-        clearTimeout(pollTimeout);
-      }
+      clearInterval(poll);
     };
   }, [lobbyId]);
 
