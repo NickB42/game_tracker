@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   quality-checks:
     runs-on: ubuntu-latest
@@ -12,6 +16,9 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x]
+    
+    env:
+      DATABASE_URL: postgresql://localhost:5432/dummy
     
     steps:
       - name: Checkout code
@@ -83,6 +90,9 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x]
+    
+    env:
+      DATABASE_URL: postgresql://localhost:5432/dummy
     
     steps:
       - name: Checkout code
