@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 describe("SessionCard component", () => {
   it("can be imported", async () => {
@@ -296,12 +298,65 @@ describe("Session detail and result action polish", () => {
 
   it("highlights sports match winners without winner badges", async () => {
     const { SportsMatchesSection } = await import("@/components/sessions/sports-matches-section");
-    const source = SportsMatchesSection.toString();
 
-    assert(source.includes("winningSideNumber"));
-    assert(source.includes("TrophyIcon"));
-    assert(!source.includes("Winner: Side"));
-    assert(!source.includes("StatusBadge"));
+    const markup = renderToStaticMarkup(
+      createElement(SportsMatchesSection, {
+        gameSessionId: "session-1",
+        activityType: "SQUASH",
+        canManageSession: false,
+        matches: [
+          {
+            id: "match-1",
+            sequenceNumber: 1,
+            notes: null,
+            participants: [
+              {
+                id: "participant-1",
+                sideNumber: 1,
+                player: {
+                  id: "player-1",
+                  displayName: "Alice",
+                  isActive: true,
+                },
+              },
+              {
+                id: "participant-2",
+                sideNumber: 2,
+                player: {
+                  id: "player-2",
+                  displayName: "Bob",
+                  isActive: true,
+                },
+              },
+            ],
+            result: {
+              winningSideNumber: 1,
+              scoreLines: [
+                {
+                  id: "score-1",
+                  sequenceNumber: 1,
+                  sideNumber: 1,
+                  score: 11,
+                },
+                {
+                  id: "score-2",
+                  sequenceNumber: 1,
+                  sideNumber: 2,
+                  score: 7,
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    assert(markup.includes('data-winning-side="true"'));
+    assert.equal((markup.match(/data-winning-side="true"/g) ?? []).length, 1);
+    assert(markup.includes("Winning side"));
+    assert(markup.includes("Alice"));
+    assert(markup.includes("Bob"));
+    assert(!markup.includes("Winner: Side"));
   });
 
   it("renders sports scores alongside match sides", async () => {
