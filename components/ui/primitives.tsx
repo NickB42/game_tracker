@@ -9,7 +9,7 @@ function cx(...parts: ClassValue[]) {
 
 type PageHeaderProps = {
   title: ReactNode;
-  description?: string;
+  description?: ReactNode;
   actions?: ReactNode;
   eyebrow?: string;
   "data-testid"?: string;

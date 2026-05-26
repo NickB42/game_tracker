@@ -25,7 +25,6 @@ export default async function EditPlayerPage({ params }: EditPlayerPageProps) {
     <section className="space-y-6">
       <PageHeader
         title="Edit player"
-        description="Update display info for this global player."
         actions={
           <Link className="app-button app-button-secondary" href={`/dashboard/players/${player.id}`}>
             Back to player

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ActivityBadge } from "@/components/sessions/activity-badge";
+import { formatActivityType } from "@/components/sessions/activity-badge";
 import { CardRoundsSection } from "@/components/sessions/card-rounds-section";
 import { SportsMatchesSection } from "@/components/sessions/sports-matches-section";
+import { ArrowLeftIcon, PencilIcon, PlusIcon, TrophyIcon } from "@/components/ui/icons";
 import { AppButton, DataTable, Divider, EmptyState, InfoRow, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
@@ -44,6 +45,13 @@ type SessionSummaryView = {
   roundsPlayed: number;
   participants: Array<{ sessionParticipantId: string; playerId: string; playerDisplayName: string; roundWins: number }>;
   matchWinnerSessionParticipantIds: string[];
+};
+
+type SportsSessionSummaryRow = {
+  sessionParticipantId: string;
+  playerId: string;
+  playerDisplayName: string;
+  matchWins: number;
 };
 
 type SportsMatchView = {
@@ -88,6 +96,47 @@ function formatDateTime(value: Date) {
   return dateFormatter.format(value);
 }
 
+function buildSportsSessionSummary(gameSession: SessionDetailView, sportsMatches: SportsMatchView[]) {
+  const rowsByPlayerId = new Map<string, SportsSessionSummaryRow>();
+
+  for (const participant of gameSession.participants) {
+    rowsByPlayerId.set(participant.player.id, {
+      sessionParticipantId: participant.id,
+      playerId: participant.player.id,
+      playerDisplayName: participant.player.displayName,
+      matchWins: 0,
+    });
+  }
+
+  for (const match of sportsMatches) {
+    const winningSideNumber = match.result?.winningSideNumber;
+
+    if (!winningSideNumber) {
+      continue;
+    }
+
+    for (const participant of match.participants) {
+      if (participant.sideNumber !== winningSideNumber) {
+        continue;
+      }
+
+      const row = rowsByPlayerId.get(participant.player.id);
+
+      if (row) {
+        row.matchWins += 1;
+      }
+    }
+  }
+
+  return [...rowsByPlayerId.values()].sort((a, b) => {
+    if (b.matchWins !== a.matchWins) {
+      return b.matchWins - a.matchWins;
+    }
+
+    return a.playerDisplayName.localeCompare(b.playerDisplayName);
+  });
+}
+
 export default async function GameSessionDetailPage({ params, searchParams }: GameSessionDetailPageProps) {
   const user = await requireAuthenticatedUser();
   const [{ id }, { returnTo }] = await Promise.all([params, searchParams]);
@@ -127,6 +176,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
 
   const latestRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
   const latestSportsMatch = sportsMatches.length > 0 ? sportsMatches[sportsMatches.length - 1] : null;
+  const sportsSummary = gameSession.activityType === "CARD" ? [] : buildSportsSessionSummary(gameSession, sportsMatches);
   const latestResultLabel =
     gameSession.activityType === "CARD"
       ? latestRound
@@ -156,35 +206,42 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
         title={
           <span className="flex flex-wrap items-center gap-2">
             <span>{gameSession.title ?? "Untitled session"}</span>
-            <ActivityBadge activityType={gameSession.activityType} />
           </span>
         }
         data-testid="session-detail-heading"
         description={
-          gameSession.activityType === "CARD"
-            ? "One session is one game night; rounds capture each short game in order."
-            : "One session can contain multiple manually entered sports matches."
+          gameSession.notes ? (
+            <>
+              <span className="md:hidden">{gameSession.notes}</span>
+              <span className="hidden md:inline">{gameSession.notes}</span>
+            </>
+          ) : null
         }
         actions={
           <>
-            <AppButton href={sessionsBackHref} variant="ghost">
-              Back to Sessions
+            <AppButton href={sessionsBackHref} variant="ghost" className="app-icon-button">
+              <ArrowLeftIcon />
+              <span className="sr-only">Back to sessions</span>
             </AppButton>
-            <AppButton href={leaderboardHref} variant="secondary">
-              Global Leaderboard
+            <AppButton href={leaderboardHref} variant="secondary" className="app-icon-button">
+              <TrophyIcon />
+              <span className="sr-only">Global leaderboard</span>
             </AppButton>
             {canManageSession ? (
               <>
-                <AppButton href={`/dashboard/sessions/${gameSession.id}/edit`} variant="secondary">
-                  Edit Session
+                <AppButton href={`/dashboard/sessions/${gameSession.id}/edit`} variant="secondary" className="app-icon-button">
+                  <PencilIcon />
+                  <span className="sr-only">Edit session</span>
                 </AppButton>
                 {gameSession.activityType === "CARD" ? (
-                  <AppButton href={`/dashboard/sessions/${gameSession.id}/rounds/new`} data-testid="session-add-round-link">
-                    Add Round
+                  <AppButton href={`/dashboard/sessions/${gameSession.id}/rounds/new`} className="app-icon-button" data-testid="session-add-round-link">
+                    <PlusIcon />
+                    <span className="sr-only">Add round</span>
                   </AppButton>
                 ) : (
-                  <AppButton href={`/dashboard/sessions/${gameSession.id}/matches/new`} data-testid="session-add-match-link">
-                    Add Match
+                  <AppButton href={`/dashboard/sessions/${gameSession.id}/matches/new`} className="app-icon-button" data-testid="session-add-match-link">
+                    <PlusIcon />
+                    <span className="sr-only">Add match</span>
                   </AppButton>
                 )}
               </>
@@ -193,7 +250,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="hidden md:grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Played at" value={formatDateTime(gameSession.playedAt)} />
         <StatCard label="Participants" value={gameSession.participants.length} tone="accent" />
         <StatCard label="Trusted admins" value={gameSession.trustedAdmins.length} tone="warning" />
@@ -213,7 +270,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
         <StatCard label="Latest result" value={latestResultLabel} tone="default" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-6 grid-cols-1 xl:grid-cols-[1.1fr_0.9fr]">
         <SectionCard title="Session Overview">
           <dl className="divide-y divide-[var(--border)] rounded-[var(--radius-md)] border border-[var(--border)]">
             <InfoRow
@@ -230,7 +287,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
             />
             <InfoRow label="Owner" value={gameSession.ownerUser.name} />
             <InfoRow label="Created by" value={gameSession.createdByUser?.name ?? "Unknown"} />
-            <InfoRow label="Activity" value={<ActivityBadge activityType={gameSession.activityType} />} />
+            <InfoRow label="Activity" value={formatActivityType(gameSession.activityType)} />
             <InfoRow label={gameSession.activityType === "CARD" ? "Rounds played" : "Matches played"} value={gameSession.activityType === "CARD" ? (summary?.roundsPlayed ?? 0) : sportsMatches.length} />
           </dl>
 
@@ -238,9 +295,34 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
 
           <h3 className="app-section-title text-base">Session summary</h3>
           {gameSession.activityType !== "CARD" ? (
-            <p className="mt-3 text-sm text-[var(--text-secondary)]">
-              Sports sessions track manual matches with activity-specific leaderboards and ratings.
-            </p>
+            sportsSummary.length > 0 ? (
+              <div className="mt-3">
+                <DataTable>
+                  <table className="app-table min-w-full">
+                    <thead>
+                      <tr>
+                        <th>Player</th>
+                        <th>Match wins</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sportsSummary.map((participant) => (
+                        <tr key={participant.sessionParticipantId}>
+                          <td>
+                            <Link className="underline" href={`/dashboard/players/${participant.playerId}`}>
+                              {participant.playerDisplayName}
+                            </Link>
+                          </td>
+                          <td>{participant.matchWins}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataTable>
+              </div>
+            ) : (
+              <EmptyState title="No participants" description="Add participants to start tracking match wins." />
+            )
           ) : summary && summary.participants.length > 0 ? (
             <div className="mt-3">
               <DataTable>
@@ -280,7 +362,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
           )}
         </SectionCard>
 
-        <div className="space-y-6">
+        <div className="hidden md:block space-y-6">
           <SectionCard title="Trusted Admins">
             {gameSession.trustedAdmins.length === 0 ? (
               <EmptyState title="No trusted admins" description="Only owner-level permissions are active for this session." />

@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ActivityType } from "@prisma/client";
 
 import { SessionForm } from "@/components/sessions/session-form";
-import { PageHeader } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateSession } from "@/lib/domain/authorization";
-import { getGroups } from "@/lib/db/groups";
+import { getGroupsForSessionForm } from "@/lib/db/groups";
 import { getAllPlayers } from "@/lib/db/players";
 import { getAssignableUsers } from "@/lib/db/users";
 import { buildSessionsHref, parseSessionsActivityFilter } from "@/lib/sessions/filter-state";
@@ -39,12 +39,14 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
   }
 
   const [groups, players, users] = await Promise.all([
-    getGroups(user),
+    getGroupsForSessionForm(user),
     getAllPlayers({ includeInactive: true }),
     getAssignableUsers(user),
   ]);
 
-  const selectedGroupId = groupId && groups.some((group) => group.id === groupId) ? groupId : undefined;
+  const defaultActivity = selectedActivity ?? "CARD";
+  const selectedGroupId =
+    groupId && groups.some((group) => group.id === groupId && group.activityType === defaultActivity) ? groupId : undefined;
 
   const backHref = buildSessionsHref({
     activity: selectedActivity ?? "ALL",
@@ -55,17 +57,22 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
     <section className="space-y-5">
       <PageHeader
         title="Create Game Session"
-        description="Record when a session was played and who attended."
         actions={
-          <Link className="app-button app-button-ghost" href={backHref}>
-            Back to sessions
-          </Link>
+          <AppButton href={backHref} variant="ghost" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to sessions</span>
+          </AppButton>
         }
       />
 
       <SessionForm
         mode="create"
-        selectableGroups={groups.map((group) => ({ id: group.id, name: group.name }))}
+        selectableGroups={groups.map((group) => ({
+          id: group.id,
+          name: group.name,
+          activityType: group.activityType,
+          playerIds: group.memberships.map((membership) => membership.playerId),
+        }))}
         selectableUsers={users.map((entry) => ({
           id: entry.id,
           name: entry.name,

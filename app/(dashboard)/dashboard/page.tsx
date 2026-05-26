@@ -43,7 +43,6 @@ export default async function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <SectionCard
           title="Quick Actions"
-          description="Jump directly to the core modules."
           actions={<AppButton href="/dashboard/online-play">Open Online Card Play</AppButton>}
         >
           <div className="grid gap-2 sm:grid-cols-2">
@@ -88,10 +87,6 @@ export default async function DashboardPage() {
               <dd>{user.playerId ? "Yes" : "No"}</dd>
             </div>
           </dl>
-
-          <p className="mt-5 text-sm text-[var(--text-muted)]">
-            Want to change credentials or review account security?
-          </p>
           <Link href="/dashboard/settings" className="app-button app-button-ghost mt-2 px-0">
             Open settings
           </Link>

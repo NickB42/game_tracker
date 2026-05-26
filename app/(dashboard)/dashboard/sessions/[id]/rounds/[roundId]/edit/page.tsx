@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RoundForm } from "@/components/rounds/round-form";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getRoundById } from "@/lib/db/rounds";
@@ -34,15 +35,15 @@ export default async function EditRoundPage({ params }: EditRoundPageProps) {
 
   return (
     <section className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Edit round #{round.sequenceNumber}</h1>
-          <p className="mt-1 text-sm text-zinc-600">Adjust finishing order while keeping session-participant integrity.</p>
-        </div>
-        <Link className="text-sm font-medium text-zinc-900 underline" href={`/dashboard/sessions/${gameSession.id}`}>
-          Back to session
-        </Link>
-      </div>
+      <PageHeader
+        title={`Edit round #${round.sequenceNumber}`}
+        actions={
+          <AppButton href={`/dashboard/sessions/${gameSession.id}`} variant="ghost" className="app-icon-button">
+            <ArrowLeftIcon />
+            <span className="sr-only">Back to session</span>
+          </AppButton>
+        }
+      />
 
       <RoundForm
         mode="edit"

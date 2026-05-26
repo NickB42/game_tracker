@@ -90,6 +90,23 @@ export async function getGroups(actor: AuthorizationActor) {
   });
 }
 
+export async function getGroupsForSessionForm(actor: AuthorizationActor) {
+  return prisma.group.findMany({
+    where: buildGroupVisibilityWhere(actor),
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      activityType: true,
+      memberships: {
+        select: {
+          playerId: true,
+        },
+      },
+    },
+  });
+}
+
 export async function getGroupById(id: string, actor: AuthorizationActor): Promise<GroupDetailRecord | null> {
   return prisma.group.findFirst({
     where: {

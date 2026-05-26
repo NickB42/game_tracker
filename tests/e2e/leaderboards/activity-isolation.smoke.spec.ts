@@ -19,8 +19,8 @@ test("@smoke leaderboard activity isolation prevents cross-activity leakage", as
   await createSessionViaUI(page, makeName("E2E Card Iso Session"), [cardP1, cardP2], { activityType: "CARD" });
   await page.getByTestId("session-add-round-link").click();
   await expect(page.getByTestId("round-form")).toBeVisible();
-  await page.getByTestId("round-position-select-1").selectOption({ label: cardP1 });
-  await page.getByTestId("round-position-select-2").selectOption({ label: cardP2 });
+  await expect(page.getByTestId("round-order-item-1")).toContainText(cardP1);
+  await expect(page.getByTestId("round-order-item-2")).toContainText(cardP2);
   await page.getByTestId("round-submit-button").click();
 
   await createSessionViaUI(page, makeName("E2E Squash Iso Session"), [squashP1, squashP2], { activityType: "SQUASH" });

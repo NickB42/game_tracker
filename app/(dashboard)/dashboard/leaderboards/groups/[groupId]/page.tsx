@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ActivityType } from "@prisma/client";
 
-import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
-import { PageHeader } from "@/components/ui/primitives";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGroupLeaderboard } from "@/lib/db/leaderboards";
 import { getGroupById } from "@/lib/db/groups";
@@ -50,21 +50,16 @@ export default async function GroupLeaderboardPage({ params, searchParams }: Gro
   return (
     <section className="space-y-6">
       <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2">
-            <span>{`Group leaderboard: ${group.name}`}</span>
-            <ActivityBadge activityType={activityType} />
-          </span>
-        }
-        description={`Scoped to ${activityType.toLowerCase()} sessions historically linked to this group.`}
+        title={group.name}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link className="app-button app-button-secondary" href="/dashboard/leaderboards">
-              Back to leaderboards
-            </Link>
-            <Link className="app-button app-button-ghost" href={`/dashboard/groups/${group.id}`}>
+            <AppButton href="/dashboard/leaderboards" variant="secondary" className="app-icon-button">
+              <ArrowLeftIcon />
+              <span className="sr-only">Back to leaderboards</span>
+            </AppButton>
+            <AppButton href={`/dashboard/groups/${group.id}`} variant="ghost">
               Open group
-            </Link>
+            </AppButton>
           </div>
         }
       />

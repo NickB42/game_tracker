@@ -77,6 +77,97 @@ export function TrophyIcon(props: IconProps) {
   );
 }
 
+export function CardIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="6" y="3" width="12" height="18" rx="2" />
+      <path d="M9 7h6" />
+      <path d="M9 11h6" />
+      <path d="M9 15h3" />
+    </BaseIcon>
+  );
+}
+
+export function SquashIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M14.5 5.5a4 4 0 0 1 4 4c0 2.2-1.8 4-4 4s-4-1.8-4-4 1.8-4 4-4z" />
+      <path d="M11.7 12.3 4 20" />
+      <circle cx="19" cy="18" r="1.5" />
+    </BaseIcon>
+  );
+}
+
+export function PadelIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="10" y="4" width="8" height="10" rx="4" />
+      <path d="M12.5 7h.01" />
+      <path d="M15.5 7h.01" />
+      <path d="M12.5 10h.01" />
+      <path d="M15.5 10h.01" />
+      <path d="M11.5 13 5 20" />
+    </BaseIcon>
+  );
+}
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M19 12H5" />
+      <path d="M12 19l-7-7 7-7" />
+    </BaseIcon>
+  );
+}
+
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 19V5" />
+      <path d="M5 12l7-7 7 7" />
+    </BaseIcon>
+  );
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 5v14" />
+      <path d="M19 12l-7 7-7-7" />
+    </BaseIcon>
+  );
+}
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </BaseIcon>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </BaseIcon>
+  );
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M6 6l1 15h10l1-15" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </BaseIcon>
+  );
+}
+
 export function OnlineIcon(props: IconProps) {
   return (
     <BaseIcon {...props}>

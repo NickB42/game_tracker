@@ -28,9 +28,8 @@ test("@smoke admin records one ranked round", async ({ page, makeName }: { page:
 
   await page.getByTestId("session-add-round-link").click();
   await expect(page.getByTestId("round-form")).toBeVisible();
-
-  await page.getByTestId("round-position-select-1").selectOption({ label: playerOne });
-  await page.getByTestId("round-position-select-2").selectOption({ label: playerTwo });
+  await expect(page.getByTestId("round-order-item-1")).toContainText(playerOne);
+  await expect(page.getByTestId("round-order-item-2")).toContainText(playerTwo);
   await page.getByTestId("round-submit-button").click();
 
   await expect(page).toHaveURL(/\/dashboard\/sessions\/.+/);

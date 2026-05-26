@@ -16,12 +16,11 @@ export default async function OnlinePlayPage() {
     <section className="space-y-6" data-testid="online-play-page">
       <PageHeader
         title="Online Play"
-        description="Card-only online mode: create and join private Shithead lobbies with reconnect support and live state sync."
         actions={<StatusBadge tone="accent">{lobbies.length} Open</StatusBadge>}
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="Create Lobby" description="Start a fresh private lobby and share the invite code with players.">
+        <SectionCard title="Create Lobby">
           <form action={createOnlineLobbyAction} className="space-y-4">
             {user.role === "ADMIN" ? (
               <label className="app-card-muted flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)]">
@@ -38,7 +37,7 @@ export default async function OnlinePlayPage() {
         <JoinLobbyForm />
       </div>
 
-      <SectionCard title="Open Lobbies" description="Available rooms you can join or reconnect to.">
+      <SectionCard title="Open Lobbies">
         {lobbies.length === 0 ? (
           <EmptyState
             title="No open lobbies"

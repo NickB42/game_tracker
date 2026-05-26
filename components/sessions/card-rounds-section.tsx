@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 import { deleteRoundAction } from "@/actions/rounds";
-import { EmptyState, SectionCard, StatusBadge } from "@/components/ui/primitives";
+import { PencilIcon, TrashIcon } from "@/components/ui/icons";
+import { EmptyState, SectionCard } from "@/components/ui/primitives";
 
 type RoundView = {
   id: string;
@@ -37,17 +38,18 @@ export function CardRoundsSection({ gameSessionId, groupId, rounds, canManageSes
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                   <span className="font-medium text-[var(--text-primary)]">Round #{round.sequenceNumber}</span>
-                  <StatusBadge>{round.placements.length} placements</StatusBadge>
                 </div>
 
                 {canManageSession ? (
                   <div className="flex items-center gap-2">
-                    <Link className="app-button app-button-ghost" href={`/dashboard/sessions/${gameSessionId}/rounds/${round.id}/edit`}>
-                      Edit
+                    <Link className="app-button app-button-ghost app-icon-button" href={`/dashboard/sessions/${gameSessionId}/rounds/${round.id}/edit`}>
+                      <PencilIcon />
+                      <span className="sr-only">Edit round</span>
                     </Link>
                     <form action={deleteRoundAction.bind(null, gameSessionId, round.id, groupId)}>
-                      <button type="submit" className="app-button app-button-destructive">
-                        Delete
+                      <button type="submit" className="app-button app-button-destructive app-icon-button">
+                        <TrashIcon />
+                        <span className="sr-only">Delete round</span>
                       </button>
                     </form>
                   </div>
