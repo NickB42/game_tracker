@@ -12,7 +12,7 @@ interface ResponsiveListProps<T> {
 }
 
 /**
- * Renders mobile-optimized cards below the md breakpoint (768px by default),
+ * Renders mobile-optimized cards below the md breakpoint,
  * and a desktop table at and above the md breakpoint.
  * Single data source, dual presentation.
  */
