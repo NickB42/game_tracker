@@ -127,7 +127,7 @@ export async function createGameSessionAction(_prevState: SessionFormState, form
   }
 
   revalidatePath("/dashboard/sessions");
-  redirect(`/dashboard/sessions/${gameSessionId}`);
+  redirect(`/dashboard/sessions/${gameSessionId}?toast=session-created`);
 }
 
 export async function updateGameSessionAction(
@@ -211,5 +211,5 @@ export async function updateGameSessionAction(
 
   revalidatePath("/dashboard/sessions");
   revalidatePath(`/dashboard/sessions/${gameSessionId}`);
-  redirect(`/dashboard/sessions/${gameSessionId}`);
+  redirect(`/dashboard/sessions/${gameSessionId}?toast=session-updated`);
 }

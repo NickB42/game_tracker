@@ -353,6 +353,22 @@ a {
   transition: all 0.18s ease;
 }
 
+.app-spinner {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: app-spin 0.7s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .app-button:focus-visible,
 .app-input:focus-visible,
 .app-select:focus-visible,

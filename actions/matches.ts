@@ -26,6 +26,11 @@ export type SportsMatchFormState = {
   };
 };
 
+export type SportsMatchDeleteState = {
+  message?: string;
+  success?: string;
+};
+
 function parseOptionalString(formData: FormData, key: string): string | undefined {
   const value = formData.get(key);
 
@@ -156,7 +161,7 @@ export async function createSportsMatchAction(
   }
 
   revalidateSportsSessionPaths(gameSessionId);
-  redirect(`/dashboard/sessions/${gameSessionId}/matches/new?saved=1`);
+  redirect(`/dashboard/sessions/${gameSessionId}/matches/new?toast=match-saved`);
 }
 
 export async function updateSportsMatchAction(
@@ -217,25 +222,46 @@ export async function updateSportsMatchAction(
   }
 
   revalidateSportsSessionPaths(gameSessionId);
-  redirect(`/dashboard/sessions/${gameSessionId}`);
+  redirect(`/dashboard/sessions/${gameSessionId}?toast=match-updated`);
 }
 
-export async function deleteSportsMatchAction(gameSessionId: string, matchId: string): Promise<void> {
+export async function deleteSportsMatchAction(
+  gameSessionId: string,
+  matchId: string,
+  _prevState: SportsMatchDeleteState,
+  _formData: FormData,
+): Promise<SportsMatchDeleteState> {
   const user = await requireAuthenticatedUser();
   const sessionContext = await getGameSessionAuthorizationContext(gameSessionId, user);
 
   if (!sessionContext || !canEditSession(user, sessionContext)) {
-    throw new Error("You are not allowed to edit matches in this session.");
+    return {
+      message: "You are not allowed to edit matches in this session.",
+    };
   }
 
-  const parsed = sportsMatchDeleteInputSchema.parse({
-    id: matchId,
-    gameSessionId,
-  });
+  try {
+    const parsed = sportsMatchDeleteInputSchema.parse({
+      id: matchId,
+      gameSessionId,
+    });
 
-  await prisma.$transaction(async (tx) => {
-    await deleteSportsMatch(parsed, tx);
-  });
+    await prisma.$transaction(async (tx) => {
+      await deleteSportsMatch(parsed, tx);
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+      };
+    }
+
+    throw error;
+  }
 
   revalidateSportsSessionPaths(gameSessionId);
+
+  return {
+    success: "Match deleted",
+  };
 }

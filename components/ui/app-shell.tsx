@@ -15,6 +15,7 @@ import {
   TrophyIcon,
   UsersIcon,
 } from "@/components/ui/icons";
+import { FlashToast } from "@/components/ui/flash-toast";
 import { ToastProvider } from "@/components/ui/toast";
 
 type AppShellProps = {
@@ -63,6 +64,7 @@ export function AppShell({ children, user }: AppShellProps) {
 
   return (
     <ToastProvider>
+      <FlashToast />
       <div className="app-shell min-h-screen">
         <header className="app-topbar">
           <div className="app-page-container flex flex-wrap items-center justify-between gap-4 py-4">

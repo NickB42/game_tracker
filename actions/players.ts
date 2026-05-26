@@ -46,7 +46,7 @@ export async function createPlayerAction(_prevState: PlayerFormState, formData: 
   const player = await createPlayer(parsed.data);
 
   revalidatePath("/dashboard/players");
-  redirect(`/dashboard/players/${player.id}`);
+  redirect(`/dashboard/players/${player.id}?toast=player-created`);
 }
 
 export async function updatePlayerAction(
@@ -88,7 +88,7 @@ export async function updatePlayerAction(
     revalidatePath(`/dashboard/players/${player.id}`);
     revalidatePath("/dashboard/sessions");
     revalidatePath("/dashboard/leaderboards");
-    redirect(`/dashboard/players/${player.id}`);
+    redirect(`/dashboard/players/${player.id}?toast=player-updated`);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return {
