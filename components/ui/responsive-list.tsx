@@ -16,7 +16,7 @@ interface ResponsiveListProps<T> {
  * and a desktop table at and above the md breakpoint.
  * Single data source, dual presentation.
  */
-export function ResponsiveList<T extends { id?: string; [key: string]: any }>({
+export function ResponsiveList<T extends { id?: string } & Record<string, unknown>>({
   data,
   mobile,
   desktop,

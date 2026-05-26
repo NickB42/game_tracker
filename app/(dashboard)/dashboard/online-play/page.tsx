@@ -6,8 +6,6 @@ import { EmptyState, PageHeader, SectionCard, StatusBadge } from "@/components/u
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { listOpenOnlineLobbies } from "@/lib/db/online";
 
-type OpenLobbyView = Awaited<ReturnType<typeof listOpenOnlineLobbies>>[number];
-
 export default async function OnlinePlayPage() {
   const user = await requireAuthenticatedUser();
   const lobbies = await listOpenOnlineLobbies();

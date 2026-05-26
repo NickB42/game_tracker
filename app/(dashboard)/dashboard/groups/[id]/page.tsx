@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ActivityBadge, formatActivityType } from "@/components/sessions/activity-badge";
+import { formatActivityType } from "@/components/sessions/activity-badge";
 import { ArrowLeftIcon, PencilIcon, TrophyIcon } from "@/components/ui/icons";
 import { AppButton, EmptyState, InfoRow, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
