@@ -163,7 +163,7 @@ jobs:
 
       - name: Run unit tests with coverage
         id: unit-tests
-        run: npm run test:unit -- --coverage
+        run: npm run test:unit -- --experimental-test-coverage
 
       - name: Upload coverage reports
         id: coverage
