@@ -7,13 +7,13 @@ describe("GroupCard component", () => {
     assert(typeof GroupCard === "function");
   });
 
-  it("displays group name and activity badge", async () => {
+  it("displays group name without an activity badge", async () => {
     const { GroupCard } = await import("@/components/groups/group-card");
     const source = GroupCard.toString();
 
     assert(source.includes("group.name"));
-    assert(source.includes("activityType"));
-    assert(source.includes("badge"));
+    assert(!source.includes("activityType"));
+    assert(!source.includes("badge"));
   });
 
   it("shows members and sessions count", async () => {
@@ -56,11 +56,11 @@ describe("Groups page - ResponsiveList integration", () => {
     assert(source.includes("EmptyState"));
   });
 
-  it("preserves activity badge display", async () => {
+  it("does not render group activity badges", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/groups/page");
     const source = testModule.default.toString();
 
-    assert(source.includes("ActivityBadge"));
+    assert(!source.includes("ActivityBadge"));
   });
 
   it("maintains authorization checks for edit functionality", async () => {
@@ -94,7 +94,6 @@ describe("Groups page - ResponsiveList integration", () => {
     const source = testModule.default.toString();
 
     assert(source.includes("desktopHeaders"));
-    assert(source.includes("Activity"));
     assert(source.includes("Members"));
   });
 
@@ -126,7 +125,6 @@ describe("Groups page - Component structure validation", () => {
     // Should have all required properties
     assert(source.includes("group.id"));
     assert(source.includes("group.name"));
-    assert(source.includes("group.activityType"));
     assert(source.includes("group._count"));
   });
 
@@ -149,12 +147,13 @@ describe("Groups page - Component structure validation", () => {
 });
 
 describe("Group detail page - mobile layout", () => {
-  it("does not render an activity badge in the header", async () => {
+  it("does not render group activity in the header or summary", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
     const source = testModule.default.toString();
 
     assert(!source.includes("ActivityBadge"));
-    assert(source.includes("formatActivityType"));
+    assert(!source.includes("formatActivityType"));
+    assert(!source.includes('label="Activity"'));
   });
 
   it("hides stat cards on mobile", async () => {
@@ -181,7 +180,7 @@ describe("Group detail page - mobile layout", () => {
     assert(source.includes("groupRecord.memberships.map"));
   });
 
-  it("uses icon-only header actions and plain activity text", async () => {
+  it("uses icon-only header actions", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/groups/[id]/page");
     const source = testModule.default.toString();
 
@@ -189,6 +188,6 @@ describe("Group detail page - mobile layout", () => {
     assert(source.includes("ArrowLeftIcon"));
     assert(source.includes("TrophyIcon"));
     assert(source.includes("PencilIcon"));
-    assert(source.includes("formatActivityType"));
+    assert(!source.includes("formatActivityType"));
   });
 });

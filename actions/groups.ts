@@ -13,7 +13,6 @@ import { groupInputSchema, groupWithMembersInputSchema } from "@/lib/validation/
 export type GroupFormState = {
   message?: string;
   fieldErrors?: {
-    activityType?: string;
     name?: string;
     description?: string;
     playerIds?: string;
@@ -47,7 +46,6 @@ export async function createGroupAction(_prevState: GroupFormState, formData: Fo
   }
 
   const parsed = groupInputSchema.safeParse({
-    activityType: formData.get("activityType"),
     name: formData.get("name"),
     description: formData.get("description"),
     trustedAdminUserIds: parseTrustedAdminUserIdsFromFormData(formData),
@@ -57,7 +55,6 @@ export async function createGroupAction(_prevState: GroupFormState, formData: Fo
     const fieldErrors = parsed.error.flatten().fieldErrors;
     return {
       fieldErrors: {
-        activityType: fieldErrors.activityType?.[0],
         name: fieldErrors.name?.[0],
         description: fieldErrors.description?.[0],
         trustedAdminUserIds: fieldErrors.trustedAdminUserIds?.[0],
@@ -131,7 +128,6 @@ export async function updateGroupAction(
 
   const parsed = groupWithMembersInputSchema.safeParse({
     id: groupId,
-    activityType: formData.get("activityType"),
     name: formData.get("name"),
     description: formData.get("description"),
     playerIds: parsePlayerIdsFromFormData(formData),
@@ -142,7 +138,6 @@ export async function updateGroupAction(
     const fieldErrors = parsed.error.flatten().fieldErrors;
     return {
       fieldErrors: {
-        activityType: fieldErrors.activityType?.[0],
         name: fieldErrors.name?.[0],
         description: fieldErrors.description?.[0],
         playerIds: fieldErrors.playerIds?.[0],

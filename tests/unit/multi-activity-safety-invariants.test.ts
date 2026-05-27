@@ -9,20 +9,26 @@ function readRepoFile(relativePath: string) {
 }
 
 describe("multi-activity safety invariants", () => {
-  it("migration backfills legacy groups and sessions to CARD before NOT NULL", () => {
+  it("original migration backfills legacy sessions to CARD before NOT NULL", () => {
     const migration = readRepoFile("prisma/migrations/20260414123000_multi_activity_foundation/migration.sql");
 
-    assert.match(migration, /UPDATE\s+"Group"\s*[\s\S]*SET\s+"activityType"\s*=\s*'CARD'[\s\S]*WHERE\s+"activityType"\s+IS\s+NULL;/m);
     assert.match(migration, /UPDATE\s+"GameSession"\s*[\s\S]*SET\s+"activityType"\s*=\s*'CARD'[\s\S]*WHERE\s+"activityType"\s+IS\s+NULL;/m);
-    assert.match(migration, /ALTER TABLE\s+"Group"[\s\S]*ALTER COLUMN\s+"activityType"\s+SET NOT NULL[\s\S]*ALTER COLUMN\s+"activityType"\s+SET DEFAULT\s+'CARD';/m);
     assert.match(migration, /ALTER TABLE\s+"GameSession"[\s\S]*ALTER COLUMN\s+"activityType"\s+SET NOT NULL[\s\S]*ALTER COLUMN\s+"activityType"\s+SET DEFAULT\s+'CARD';/m);
   });
 
-  it("schema defaults preserve legacy CARD behavior", () => {
+  it("schema keeps activity on sessions, not groups", () => {
     const schema = readRepoFile("prisma/schema.prisma");
 
-    assert.match(schema, /model\s+Group\s*\{[\s\S]*activityType\s+ActivityType\s+@default\(CARD\)/m);
+    const groupModel = schema.match(/model\s+Group\s*\{[\s\S]*?\n\}/m)?.[0] ?? "";
+    assert(!groupModel.includes("activityType"));
     assert.match(schema, /model\s+GameSession\s*\{[\s\S]*activityType\s+ActivityType\s+@default\(CARD\)/m);
+  });
+
+  it("drops the legacy group activity column", () => {
+    const migration = readRepoFile("prisma/migrations/20260527235500_remove_group_activity_type/migration.sql");
+
+    assert.match(migration, /DROP INDEX IF EXISTS "Group_activityType_idx";/m);
+    assert.match(migration, /ALTER TABLE "Group" DROP COLUMN "activityType";/m);
   });
 
   it("online export remains card-only", () => {

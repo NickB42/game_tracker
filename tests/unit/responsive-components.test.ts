@@ -14,10 +14,6 @@ describe("Responsive UI Components - Imports", () => {
     assert(typeof ResponsiveList === "function");
   });
 
-  it("LeaderboardCard can be imported", async () => {
-    const { LeaderboardCard } = await import("@/components/leaderboards/leaderboard-card");
-    assert(typeof LeaderboardCard === "function");
-  });
 });
 
 // Test component structure and prop types
@@ -36,15 +32,11 @@ describe("Responsive UI Components - Component Structure", () => {
     assert(ResponsiveList.name === "ResponsiveList");
   });
 
-  it("LeaderboardCard accepts leaderboard data", async () => {
-    const { LeaderboardCard } = await import("@/components/leaderboards/leaderboard-card");
-    assert(LeaderboardCard.name === "LeaderboardCard");
-  });
 });
 
 // Test LeaderboardTable integration
-describe("LeaderboardTable - Responsive List Integration", () => {
-  it("LeaderboardTable imports ResponsiveList", async () => {
+describe("LeaderboardTable - Mobile and Desktop Tables", () => {
+  it("LeaderboardTable can be imported", async () => {
     const { LeaderboardTable } = await import("@/components/leaderboards/leaderboard-table");
     assert(typeof LeaderboardTable === "function");
   });
@@ -72,6 +64,16 @@ describe("LeaderboardTable - Responsive List Integration", () => {
     const source = LeaderboardTable.toString();
     // Should mention SQUASH/sports activities
     assert(source.includes("activityType"));
+  });
+
+  it("uses a compact mobile table instead of leaderboard cards", async () => {
+    const { LeaderboardTable } = await import("@/components/leaderboards/leaderboard-table");
+
+    const source = LeaderboardTable.toString();
+    assert(source.includes("leaderboard-mobile-table"));
+    assert(source.includes("W/L"));
+    assert(source.includes("playedLabel"));
+    assert(!source.includes("LeaderboardCard"));
   });
 });
 

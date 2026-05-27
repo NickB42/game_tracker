@@ -59,7 +59,6 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
           isActive: player.isActive,
         }))}
         defaultValues={{
-          activityType: groupRecord.activityType,
           name: groupRecord.name,
           description: groupRecord.description,
           memberPlayerIds: groupRecord.memberships.map((membership) => membership.playerId),

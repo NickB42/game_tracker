@@ -71,11 +71,6 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
   const validGroupId = rawGroupId && groups.some((group) => group.id === rawGroupId) ? rawGroupId : undefined;
   const sessions = rawSessions as unknown as SessionListRow[];
 
-  const selectableGroups =
-    activityFilter === "ALL"
-      ? groups
-      : groups.filter((group) => group.activityType === activityFilter);
-
   const activeFilterState = {
     activity: activityFilter,
     groupId: validGroupId,
@@ -120,11 +115,7 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
               key={entry.value}
               href={buildSessionsHref({
                 activity: entry.value as SessionsActivityFilter,
-                groupId:
-                  validGroupId &&
-                  (entry.value === "ALL" || groups.some((group) => group.id === validGroupId && group.activityType === entry.value))
-                    ? validGroupId
-                    : undefined,
+                groupId: validGroupId,
               })}
               className={`app-button whitespace-nowrap ${activityFilter === entry.value ? "app-button-primary" : "app-button-ghost"}`}
               data-testid={`sessions-activity-filter-${entry.value.toLowerCase()}`}
@@ -141,7 +132,7 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
           >
             All groups
           </Link>
-          {selectableGroups.map((group) => (
+          {groups.map((group) => (
             <Link
               key={group.id}
               href={buildSessionsHref({ activity: activityFilter, groupId: group.id })}

@@ -144,7 +144,6 @@ model Player {
 model Group {
   id          String   @id @default(cuid())
   ownerUserId String
-  activityType ActivityType @default(CARD)
   name        String
   description String?
   archivedAt  DateTime?
@@ -158,7 +157,6 @@ model Group {
 
   @@unique([name])
   @@index([ownerUserId])
-  @@index([activityType])
   @@index([archivedAt])
 }
 

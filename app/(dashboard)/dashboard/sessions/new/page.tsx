@@ -44,9 +44,7 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
     getAssignableUsers(user),
   ]);
 
-  const defaultActivity = selectedActivity ?? "CARD";
-  const selectedGroupId =
-    groupId && groups.some((group) => group.id === groupId && group.activityType === defaultActivity) ? groupId : undefined;
+  const selectedGroupId = groupId && groups.some((group) => group.id === groupId) ? groupId : undefined;
 
   const backHref = buildSessionsHref({
     activity: selectedActivity ?? "ALL",
@@ -70,7 +68,6 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
         selectableGroups={groups.map((group) => ({
           id: group.id,
           name: group.name,
-          activityType: group.activityType,
           playerIds: group.memberships.map((membership) => membership.playerId),
         }))}
         selectableUsers={users.map((entry) => ({

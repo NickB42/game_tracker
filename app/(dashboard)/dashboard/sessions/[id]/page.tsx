@@ -198,7 +198,10 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
   const sessionsBackHref = decodedReturnTo.startsWith("/dashboard/sessions")
     ? decodedReturnTo
     : `/dashboard/sessions?activity=${gameSession.activityType}`;
-  const leaderboardHref = `/dashboard/leaderboards/global?activity=${gameSession.activityType}`;
+  const leaderboardHref = gameSession.group
+    ? `/dashboard/leaderboards/groups/${gameSession.group.id}?activity=${gameSession.activityType}`
+    : `/dashboard/leaderboards/global?activity=${gameSession.activityType}`;
+  const leaderboardLabel = gameSession.group ? "Group leaderboard" : "Global leaderboard";
 
   return (
     <section className="space-y-6">
@@ -225,7 +228,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
             </AppButton>
             <AppButton href={leaderboardHref} variant="secondary" className="app-icon-button">
               <TrophyIcon />
-              <span className="sr-only">Global leaderboard</span>
+              <span className="sr-only">{leaderboardLabel}</span>
             </AppButton>
             {canManageSession ? (
               <>

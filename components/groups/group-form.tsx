@@ -26,7 +26,6 @@ type GroupFormProps =
       selectablePlayers: SelectablePlayer[];
       selectableUsers: SelectableUser[];
       defaultValues?: {
-        activityType?: "CARD" | "SQUASH" | "PADEL";
         name?: string;
         description?: string | null;
         memberPlayerIds?: string[];
@@ -39,7 +38,6 @@ type GroupFormProps =
       selectablePlayers: SelectablePlayer[];
       selectableUsers: SelectableUser[];
       defaultValues: {
-        activityType: "CARD" | "SQUASH" | "PADEL";
         name: string;
         description?: string | null;
         memberPlayerIds: string[];
@@ -75,14 +73,6 @@ export function GroupForm(props: GroupFormProps) {
   return (
     <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
       <PendingInteractionLock active={isPending} label="Saving group..." />
-      <Field id="activityType" label="Activity" error={state.fieldErrors?.activityType}>
-        <select id="activityType" name="activityType" defaultValue={defaults?.activityType ?? "CARD"} className="app-select">
-          <option value="CARD">Card</option>
-          <option value="SQUASH">Squash</option>
-          <option value="PADEL">Padel</option>
-        </select>
-      </Field>
-
       <Field id="name" label="Group name" error={state.fieldErrors?.name}>
         <input
           id="name"

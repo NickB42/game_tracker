@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { ActivityBadge } from "@/components/sessions/activity-badge";
 import { GroupCard } from "@/components/groups/group-card";
 import { PlusIcon } from "@/components/ui/icons";
 import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/primitives";
@@ -41,7 +40,6 @@ export default async function GroupsPage() {
           desktopHeaders={
             <tr>
               <th>Name</th>
-              <th>Activity</th>
               <th>Members</th>
               <th>Sessions</th>
               <th>Actions</th>
@@ -53,9 +51,6 @@ export default async function GroupsPage() {
           desktop={(group) => (
             <tr key={group.id}>
               <td className="font-medium text-[var(--text-primary)]">{group.name}</td>
-              <td>
-                <ActivityBadge activityType={group.activityType} />
-              </td>
               <td>{group._count.memberships}</td>
               <td>{group._count.gameSessions}</td>
               <td>
