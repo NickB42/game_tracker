@@ -63,7 +63,6 @@ export default async function EditGameSessionPage({ params }: EditGameSessionPag
         selectableGroups={groups.map((group) => ({
           id: group.id,
           name: group.name,
-          activityType: group.activityType,
           playerIds: group.memberships.map((membership) => membership.playerId),
         }))}
         selectableUsers={users.map((entry) => ({

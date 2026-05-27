@@ -97,7 +97,6 @@ export async function getGroupsForSessionForm(actor: AuthorizationActor) {
     select: {
       id: true,
       name: true,
-      activityType: true,
       memberships: {
         select: {
           playerId: true,
@@ -139,7 +138,6 @@ export async function createGroup(input: GroupInput & { ownerUserId: string }, t
   return db.group.create({
     data: {
       ownerUserId: input.ownerUserId,
-      activityType: input.activityType,
       name: input.name,
       description: input.description,
       trustedAdmins: {
@@ -160,7 +158,6 @@ export async function updateGroup(
   return db.group.update({
     where: { id: input.id },
     data: {
-      activityType: input.activityType,
       name: input.name,
       description: input.description,
     },

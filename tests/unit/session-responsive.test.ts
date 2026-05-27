@@ -200,13 +200,14 @@ describe("Sessions page - Component structure validation", () => {
 });
 
 describe("Session form filtering", () => {
-  it("filters groups by the selected activity", async () => {
+  it("keeps groups activity agnostic when activity changes", async () => {
     const { SessionForm } = await import("@/components/sessions/session-form");
     const source = SessionForm.toString();
 
-    assert(source.includes("selectableGroupsForActivity"));
-    assert(source.includes("activityType"));
+    assert(!source.includes("selectableGroupsForActivity"));
+    assert(!source.includes("currentGroup?.activityType"));
     assert(source.includes("selectedActivityType"));
+    assert(source.includes("props.selectableGroups.map"));
   });
 
   it("filters participants by the selected group", async () => {

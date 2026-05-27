@@ -5,7 +5,6 @@ interface GroupCardProps {
   group: {
     id: string
     name: string
-    activityType: 'CARD' | 'SQUASH' | 'PADEL'
     _count: {
       memberships: number
       gameSessions: number
@@ -23,10 +22,6 @@ export function GroupCard({ group }: GroupCardProps) {
     <Link href={`/dashboard/groups/${group.id}`}>
       <ListItemCard
         title={group.name}
-        badge={{
-          label: group.activityType,
-          variant: 'default',
-        }}
         stats={stats}
       />
     </Link>

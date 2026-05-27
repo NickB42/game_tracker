@@ -18,7 +18,6 @@ async function assertGroupExists(groupId: string, db: Prisma.TransactionClient |
     where: { id: groupId },
     select: {
       id: true,
-      activityType: true,
       archivedAt: true,
       trustedAdmins: {
         select: {
@@ -193,10 +192,6 @@ export async function createGameSession(
   if (input.groupId) {
     const group = await assertGroupExists(input.groupId, db);
 
-    if (group.activityType !== input.activityType) {
-      throw new Error("Selected group activity must match the session activity.");
-    }
-
     groupTrustedAdminUserIds = group.trustedAdmins.map((entry) => entry.userId);
   }
 
@@ -274,11 +269,7 @@ export async function updateGameSession(input: GameSessionUpdateInput, tx?: Pris
   }
 
   if (input.groupId) {
-    const group = await assertGroupExists(input.groupId, db);
-
-    if (group.activityType !== input.activityType) {
-      throw new Error("Selected group activity must match the session activity.");
-    }
+    await assertGroupExists(input.groupId, db);
   }
 
   return db.gameSession.update({

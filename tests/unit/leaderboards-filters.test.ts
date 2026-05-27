@@ -41,14 +41,15 @@ describe("leaderboard data-layer filters", () => {
 });
 
 describe("leaderboard page headers", () => {
-  it("groups leaderboard links by activity without row badges or open buttons", async () => {
+  it("lists group leaderboards without activity grouping or row badges", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/leaderboards/page");
     const source = testModule.default.toString();
 
-    assert(source.includes("groupsByActivity"));
-    assert(source.includes("formatActivityType"));
+    assert(source.includes("groups.map"));
     assert(source.includes("Global leaderboard"));
     assert(source.includes("TrophyIcon"));
+    assert(!source.includes("groupsByActivity"));
+    assert(!source.includes("formatActivityType"));
     assert(!source.includes("ActivityBadge"));
     assert(!source.includes("Open leaderboard"));
     assert(!source.includes("Open global leaderboard"));

@@ -16,7 +16,6 @@ type SelectablePlayer = {
 type SelectableGroup = {
   id: string;
   name: string;
-  activityType: "CARD" | "SQUASH" | "PADEL";
   playerIds: string[];
 };
 
@@ -86,7 +85,6 @@ export function SessionForm(props: SessionFormProps) {
   const playedAtDefault = defaults?.playedAt ? toDateTimeLocalInputValue(defaults.playedAt) : toDateTimeLocalInputValue(new Date().toISOString());
   const [selectedActivityType, setSelectedActivityType] = useState(defaults?.activityType ?? "CARD");
   const [selectedGroupId, setSelectedGroupId] = useState(defaults?.groupId ?? "");
-  const selectableGroupsForActivity = props.selectableGroups.filter((group) => group.activityType === selectedActivityType);
   const selectedGroup = props.selectableGroups.find((group) => group.id === selectedGroupId);
   const selectablePlayersForGroup = selectedGroup
     ? props.selectablePlayers.filter((player) => selectedGroup.playerIds.includes(player.id))
@@ -102,12 +100,7 @@ export function SessionForm(props: SessionFormProps) {
           value={selectedActivityType}
           onChange={(event) => {
             const nextActivityType = event.currentTarget.value as "CARD" | "SQUASH" | "PADEL";
-
             setSelectedActivityType(nextActivityType);
-            setSelectedGroupId((currentGroupId) => {
-              const currentGroup = props.selectableGroups.find((group) => group.id === currentGroupId);
-              return currentGroup?.activityType === nextActivityType ? currentGroupId : "";
-            });
           }}
           className="app-select"
         >
@@ -126,7 +119,7 @@ export function SessionForm(props: SessionFormProps) {
           className="app-select"
         >
           <option value="">No group</option>
-          {selectableGroupsForActivity.map((group) => (
+          {props.selectableGroups.map((group) => (
             <option key={group.id} value={group.id}>
               {group.name}
             </option>

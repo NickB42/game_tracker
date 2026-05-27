@@ -361,7 +361,6 @@ export async function getGroupLeaderboard(
     },
     select: {
       id: true,
-      activityType: true,
     },
   });
 
@@ -369,15 +368,7 @@ export async function getGroupLeaderboard(
     return null;
   }
 
-  const activityType = options?.activityType ?? visibleGroup.activityType;
-
-  if (activityType !== visibleGroup.activityType) {
-    return {
-      activityType,
-      ratingSystem: getRatingSystemForActivity(activityType),
-      rows: [],
-    };
-  }
+  const activityType = options?.activityType ?? "CARD";
 
   return buildLeaderboard({ groupId, activityType });
 }
