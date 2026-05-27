@@ -5,6 +5,7 @@ import { closestCenter, DndContext, PointerSensor, useDraggable, useDroppable, u
 import { CSS } from "@dnd-kit/utilities";
 
 import { createRoundAction, type RoundFormState, updateRoundAction } from "@/actions/rounds";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ArrowDownIcon, ArrowUpIcon } from "@/components/ui/icons";
 
 type ParticipantOption = {
@@ -174,7 +175,7 @@ export function RoundForm(props: RoundFormProps) {
   }
 
   return (
-    <form action={formAction} className="app-card space-y-5 p-5 md:p-6" data-testid="round-form">
+    <form action={formAction} className="app-card space-y-5 p-5 md:p-6" data-testid="round-form" aria-busy={isPending}>
       <div>
         <h2 className="app-section-title">Finishing order</h2>
       </div>
@@ -222,14 +223,12 @@ export function RoundForm(props: RoundFormProps) {
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending || participantCount < 2}
+      <FormSubmitButton
+        label={props.mode === "edit" ? "Save round" : "Add round"}
+        pendingLabel="Saving..."
+        disabled={participantCount < 2}
         data-testid="round-submit-button"
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : props.mode === "edit" ? "Save round" : "Add round"}
-      </button>
+      />
     </form>
   );
 }

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { createSportsMatchAction, type SportsMatchFormState, updateSportsMatchAction } from "@/actions/matches";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
 
 type ParticipantOption = {
@@ -77,7 +78,7 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
     (props.activityType === "SQUASH" ? [firstFour[1] ?? ""] : [firstFour[2] ?? "", firstFour[3] ?? ""]);
 
   return (
-    <form action={formAction} className="app-card space-y-5 p-6">
+    <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
       <FormSection
         title={props.activityType === "SQUASH" ? "Players" : "Teams"}
         description={
@@ -261,13 +262,10 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
         <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">{state.message}</div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : props.mode === "edit" ? "Save match" : "Add match and keep entering"}
-      </button>
+      <FormSubmitButton
+        label={props.mode === "edit" ? "Save match" : "Add match and keep entering"}
+        pendingLabel="Saving..."
+      />
     </form>
   );
 }

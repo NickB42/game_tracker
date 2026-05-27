@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 
 import { createManagedUserAction, type AdminUserFormState } from "@/actions/admin-users";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field } from "@/components/ui/form-primitives";
 import { useToast } from "@/components/ui/toast";
 
@@ -31,7 +32,7 @@ export function UserCreateForm({ players }: UserCreateFormProps) {
   }, [pushToast, state.message]);
 
   return (
-    <form action={formAction} className="app-card space-y-4 p-6">
+    <form action={formAction} className="app-card space-y-4 p-6" aria-busy={isPending}>
       <Field id="name" label="Name" error={state.fieldErrors?.name}>
         <input
           id="name"
@@ -107,13 +108,7 @@ export function UserCreateForm({ players }: UserCreateFormProps) {
         <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">{state.message}</div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Creating..." : "Create user"}
-      </button>
+      <FormSubmitButton label="Create user" pendingLabel="Creating..." />
     </form>
   );
 }

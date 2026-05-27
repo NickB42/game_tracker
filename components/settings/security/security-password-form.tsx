@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 import { changeOwnPasswordAction, type SecurityFormState } from "@/actions/account-security";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field } from "@/components/ui/form-primitives";
 import { useToast } from "@/components/ui/toast";
 
@@ -47,6 +48,7 @@ export function SecurityPasswordForm({ isForcedFlow = false }: SecurityPasswordF
       action={formAction}
       className="app-card space-y-4 p-6"
       data-testid="force-password-change-form"
+      aria-busy={isPending}
     >
       <Field id="currentPassword" label="Current password" error={state.fieldErrors?.currentPassword}>
         <input
@@ -106,14 +108,11 @@ export function SecurityPasswordForm({ isForcedFlow = false }: SecurityPasswordF
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
+      <FormSubmitButton
+        label="Update password"
+        pendingLabel="Saving..."
         data-testid="security-submit-button"
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : "Update password"}
-      </button>
+      />
     </form>
   );
 }

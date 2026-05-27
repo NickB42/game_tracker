@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { deleteSportsMatchAction } from "@/actions/matches";
+import { DeleteActionButton } from "@/components/ui/delete-action-button";
 import { PencilIcon, PlusIcon, TrashIcon, TrophyIcon } from "@/components/ui/icons";
 import { AppButton, EmptyState, SectionCard } from "@/components/ui/primitives";
 
@@ -120,12 +121,13 @@ export function SportsMatchesSection({ gameSessionId, activityType, canManageSes
                         <PencilIcon />
                         <span className="sr-only">Edit match</span>
                       </Link>
-                      <form action={deleteSportsMatchAction.bind(null, gameSessionId, match.id)}>
-                        <button type="submit" className="app-button app-button-destructive app-icon-button">
-                          <TrashIcon />
-                          <span className="sr-only">Delete match</span>
-                        </button>
-                      </form>
+                      <DeleteActionButton
+                        action={deleteSportsMatchAction.bind(null, gameSessionId, match.id)}
+                        label="Delete match"
+                        className="app-icon-button"
+                      >
+                        <TrashIcon />
+                      </DeleteActionButton>
                     </div>
                   ) : null}
                 </div>

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 
 import { joinOnlineLobbyAction, type OnlineLobbyFormState } from "@/actions/online";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { useToast } from "@/components/ui/toast";
 
 export function JoinLobbyForm() {
@@ -23,7 +24,7 @@ export function JoinLobbyForm() {
   }, [pushToast, state.fieldErrors?.code, state.message]);
 
   return (
-    <form action={formAction} className="app-card space-y-3 p-6">
+    <form action={formAction} className="app-card space-y-3 p-6" aria-busy={isPending}>
       <h2 className="app-section-title">Join Lobby</h2>
       <label htmlFor="code" className="app-field-label block">
         Join code
@@ -41,13 +42,7 @@ export function JoinLobbyForm() {
       {state.fieldErrors?.code ? <p className="text-xs text-[var(--danger)]">{state.fieldErrors.code}</p> : null}
       {state.message ? <p className="text-xs text-[var(--danger)]">{state.message}</p> : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="app-button app-button-secondary disabled:opacity-60"
-      >
-        {isPending ? "Joining..." : "Join lobby"}
-      </button>
+      <FormSubmitButton label="Join lobby" pendingLabel="Joining..." variant="secondary" />
     </form>
   );
 }

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { createGameSessionAction, type SessionFormState, updateGameSessionAction } from "@/actions/sessions";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
 
 type SelectablePlayer = {
@@ -91,7 +92,7 @@ export function SessionForm(props: SessionFormProps) {
     : props.selectablePlayers;
 
   return (
-    <form action={formAction} className="app-card space-y-5 p-6">
+    <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
       <Field id="activityType" label="Activity" error={state.fieldErrors?.activityType}>
         <select
           id="activityType"
@@ -229,14 +230,11 @@ export function SessionForm(props: SessionFormProps) {
         <div className="app-card-muted border-[color:color-mix(in_srgb,var(--danger)_45%,var(--border))] px-3 py-2 text-sm text-[var(--danger)]">{state.message}</div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
+      <FormSubmitButton
+        label={props.mode === "edit" ? "Save changes" : "Create session"}
+        pendingLabel="Saving..."
         data-testid="session-submit-button"
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : props.mode === "edit" ? "Save changes" : "Create session"}
-      </button>
+      />
     </form>
   );
 }
