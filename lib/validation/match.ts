@@ -143,11 +143,11 @@ export const sportsMatchBaseInputSchema = z
       });
     }
 
-    if (value.padelSets.length < 2) {
+    if (value.padelSets.length < 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["padelSets"],
-        message: "Padel requires at least 2 completed sets.",
+        message: "Padel requires at least 1 completed set.",
       });
       return;
     }

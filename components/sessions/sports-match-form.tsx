@@ -209,7 +209,10 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
           </div>
         </FormSection>
       ) : (
-        <FormSection title="Set scores" description="Enter tennis-style set scores. Set 3 is only needed if sets 1 and 2 are split.">
+        <FormSection
+          title="Set scores"
+          description="Enter at least one tennis-style set score. Add sets 2 and 3 only when those sets were played."
+        >
           <div className="space-y-3">
             {[1, 2, 3].map((setNumber, index) => (
               <div key={setNumber} className="grid gap-3 md:grid-cols-[auto_1fr_1fr] md:items-end">
@@ -223,7 +226,7 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
                     max={7}
                     defaultValue={getPadelSetDefaultValue(defaults?.padelSets, index, "sideOneGames")}
                     className="app-input"
-                    required={setNumber <= 2}
+                    required={setNumber === 1}
                   />
                 </Field>
                 <Field id={`padel-set-${setNumber}-side-two`} label="Side 2 games">
@@ -235,7 +238,7 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
                     max={7}
                     defaultValue={getPadelSetDefaultValue(defaults?.padelSets, index, "sideTwoGames")}
                     className="app-input"
-                    required={setNumber <= 2}
+                    required={setNumber === 1}
                   />
                 </Field>
               </div>

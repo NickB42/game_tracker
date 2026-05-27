@@ -48,6 +48,18 @@ describe("sports match validation", () => {
     assert.equal(parsed.success, true);
   });
 
+  it("accepts single-set padel payload", () => {
+    const parsed = sportsMatchCreateInputSchema.safeParse({
+      gameSessionId: "session-1",
+      activityType: "PADEL",
+      sideOneSessionParticipantIds: ["sp-1", "sp-2"],
+      sideTwoSessionParticipantIds: ["sp-3", "sp-4"],
+      padelSets: [{ sideOneGames: 6, sideTwoGames: 4 }],
+    });
+
+    assert.equal(parsed.success, true);
+  });
+
   it("rejects padel payload with invalid participant count", () => {
     const parsed = sportsMatchCreateInputSchema.safeParse({
       gameSessionId: "session-1",
