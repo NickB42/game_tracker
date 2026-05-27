@@ -3,7 +3,9 @@
 import { useActionState, useEffect, useRef } from "react";
 
 import { createGroupAction, type GroupFormState, updateGroupAction } from "@/actions/groups";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type SelectablePlayer = {
@@ -71,7 +73,8 @@ export function GroupForm(props: GroupFormProps) {
   }, [pushToast, state.message]);
 
   return (
-    <form action={formAction} className="app-card space-y-5 p-6">
+    <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving group..." />
       <Field id="activityType" label="Activity" error={state.fieldErrors?.activityType}>
         <select id="activityType" name="activityType" defaultValue={defaults?.activityType ?? "CARD"} className="app-select">
           <option value="CARD">Card</option>
@@ -162,13 +165,10 @@ export function GroupForm(props: GroupFormProps) {
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : props.mode === "edit" ? "Save changes" : "Create group"}
-      </button>
+      <FormSubmitButton
+        label={props.mode === "edit" ? "Save changes" : "Create group"}
+        pendingLabel="Saving..."
+      />
     </form>
   );
 }

@@ -19,6 +19,11 @@ export type RoundFormState = {
   };
 };
 
+export type RoundDeleteState = {
+  message?: string;
+  success?: string;
+};
+
 function parseOptionalString(formData: FormData, key: string): string | undefined {
   const value = formData.get(key);
 
@@ -103,7 +108,7 @@ export async function createRoundAction(
   revalidatePath("/dashboard/sessions");
   revalidatePath(`/dashboard/sessions/${gameSessionId}`);
   revalidateLeaderboardPaths(groupId);
-  redirect(`/dashboard/sessions/${gameSessionId}`);
+  redirect(`/dashboard/sessions/${gameSessionId}?toast=round-added`);
 }
 
 export async function updateRoundAction(
@@ -158,27 +163,49 @@ export async function updateRoundAction(
   revalidatePath("/dashboard/sessions");
   revalidatePath(`/dashboard/sessions/${gameSessionId}`);
   revalidateLeaderboardPaths(groupId);
-  redirect(`/dashboard/sessions/${gameSessionId}`);
+  redirect(`/dashboard/sessions/${gameSessionId}?toast=round-updated`);
 }
 
-export async function deleteRoundAction(gameSessionId: string, roundId: string, groupId: string | null): Promise<void> {
+export async function deleteRoundAction(
+  gameSessionId: string,
+  roundId: string,
+  groupId: string | null,
+  _prevState: RoundDeleteState,
+  _formData: FormData,
+): Promise<RoundDeleteState> {
   const user = await requireAuthenticatedUser();
   const sessionContext = await getGameSessionAuthorizationContext(gameSessionId, user);
 
   if (!sessionContext || !canEditSession(user, sessionContext)) {
-    throw new Error("You are not allowed to edit rounds in this session.");
+    return {
+      message: "You are not allowed to edit rounds in this session.",
+    };
   }
 
-  const parsed = roundDeleteInputSchema.parse({
-    id: roundId,
-    gameSessionId,
-  });
+  try {
+    const parsed = roundDeleteInputSchema.parse({
+      id: roundId,
+      gameSessionId,
+    });
 
-  await prisma.$transaction(async (tx) => {
-    await deleteRound(parsed, tx);
-  });
+    await prisma.$transaction(async (tx) => {
+      await deleteRound(parsed, tx);
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+      };
+    }
+
+    throw error;
+  }
 
   revalidatePath("/dashboard/sessions");
   revalidatePath(`/dashboard/sessions/${gameSessionId}`);
   revalidateLeaderboardPaths(groupId);
+
+  return {
+    success: "Round deleted",
+  };
 }

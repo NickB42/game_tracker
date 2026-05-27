@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { deleteRoundAction } from "@/actions/rounds";
 import { PencilIcon, TrashIcon } from "@/components/ui/icons";
+import { DeleteActionButton } from "@/components/ui/delete-action-button";
 import { EmptyState, SectionCard } from "@/components/ui/primitives";
 
 type RoundView = {
@@ -46,12 +47,13 @@ export function CardRoundsSection({ gameSessionId, groupId, rounds, canManageSes
                       <PencilIcon />
                       <span className="sr-only">Edit round</span>
                     </Link>
-                    <form action={deleteRoundAction.bind(null, gameSessionId, round.id, groupId)}>
-                      <button type="submit" className="app-button app-button-destructive app-icon-button">
-                        <TrashIcon />
-                        <span className="sr-only">Delete round</span>
-                      </button>
-                    </form>
+                    <DeleteActionButton
+                      action={deleteRoundAction.bind(null, gameSessionId, round.id, groupId)}
+                      label="Delete round"
+                      className="app-icon-button"
+                    >
+                      <TrashIcon />
+                    </DeleteActionButton>
                   </div>
                 ) : null}
               </div>

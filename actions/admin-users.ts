@@ -80,7 +80,7 @@ export async function createManagedUserAction(
 
   revalidatePath("/dashboard/admin/users");
   revalidatePath("/dashboard/admin/users/new");
-  redirect("/dashboard/admin/users");
+  redirect("/dashboard/admin/users?toast=user-created");
 }
 
 export async function updateManagedUserAction(

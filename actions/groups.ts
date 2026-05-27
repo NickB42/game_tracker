@@ -112,7 +112,7 @@ export async function createGroupAction(_prevState: GroupFormState, formData: Fo
   }
 
   revalidatePath("/dashboard/groups");
-  redirect(`/dashboard/groups/${groupId}`);
+  redirect(`/dashboard/groups/${groupId}?toast=group-created`);
 }
 
 export async function updateGroupAction(
@@ -209,5 +209,5 @@ export async function updateGroupAction(
   revalidatePath(`/dashboard/groups/${groupIdFromUpdate}`);
   revalidatePath("/dashboard/sessions");
   revalidatePath(`/dashboard/leaderboards/groups/${groupIdFromUpdate}`);
-  redirect(`/dashboard/groups/${groupIdFromUpdate}`);
+  redirect(`/dashboard/groups/${groupIdFromUpdate}?toast=group-updated`);
 }

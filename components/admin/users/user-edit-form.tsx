@@ -8,7 +8,9 @@ import {
   type AdminResetPasswordFormState,
   type AdminUserFormState,
 } from "@/actions/admin-users";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type PlayerOption = {
@@ -70,7 +72,8 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
 
   return (
     <div className="space-y-5">
-      <form action={updateFormAction} className="app-card space-y-4 p-6">
+      <PendingInteractionLock active={isUpdating || isResetting} label={isResetting ? "Updating password..." : "Saving user..."} />
+      <form action={updateFormAction} className="app-card space-y-4 p-6" aria-busy={isUpdating}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="email" label="Email" hint="Email is immutable after account creation.">
             <input
@@ -143,16 +146,10 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
           </div>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={isUpdating}
-          className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isUpdating ? "Saving..." : "Save user details"}
-        </button>
+        <FormSubmitButton label="Save user details" pendingLabel="Saving..." />
       </form>
 
-      <form action={passwordFormAction} className="app-card space-y-4 p-6">
+      <form action={passwordFormAction} className="app-card space-y-4 p-6" aria-busy={isResetting}>
         <FormSection title="Reset password" description="Set a temporary password and session policy updates.">
           <div />
         </FormSection>
@@ -199,13 +196,7 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
           </div>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={isResetting}
-          className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isResetting ? "Updating..." : "Set temporary password"}
-        </button>
+        <FormSubmitButton label="Set temporary password" pendingLabel="Updating..." />
       </form>
     </div>
   );

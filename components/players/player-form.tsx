@@ -3,7 +3,9 @@
 import { useActionState, useEffect, useRef } from "react";
 
 import { createPlayerAction, type PlayerFormState, updatePlayerAction } from "@/actions/players";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type PlayerFormProps =
@@ -49,7 +51,8 @@ export function PlayerForm(props: PlayerFormProps) {
   }, [pushToast, state.message]);
 
   return (
-    <form action={formAction} className="app-card space-y-5 p-6">
+    <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving player..." />
       <Field id="displayName" label="Display name" error={state.fieldErrors?.displayName}>
         <input
           id="displayName"
@@ -80,14 +83,11 @@ export function PlayerForm(props: PlayerFormProps) {
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
+      <FormSubmitButton
+        label={props.mode === "edit" ? "Save changes" : "Create player"}
+        pendingLabel="Saving..."
         data-testid="player-submit-button"
-        className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : props.mode === "edit" ? "Save changes" : "Create player"}
-      </button>
+      />
     </form>
   );
 }
