@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { createPlayerAction, type PlayerFormState, updatePlayerAction } from "@/actions/players";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type PlayerFormProps =
@@ -51,6 +52,7 @@ export function PlayerForm(props: PlayerFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving player..." />
       <Field id="displayName" label="Display name" error={state.fieldErrors?.displayName}>
         <input
           id="displayName"

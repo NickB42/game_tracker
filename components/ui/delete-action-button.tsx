@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef } from "react";
 
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { AppButton } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 
@@ -57,6 +58,7 @@ export function DeleteActionButton({
 
   return (
     <form action={formAction} aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label={pendingLabel} />
       <AppButton
         type="submit"
         variant="destructive"

@@ -7,6 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { createRoundAction, type RoundFormState, updateRoundAction } from "@/actions/rounds";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ArrowDownIcon, ArrowUpIcon } from "@/components/ui/icons";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 
 type ParticipantOption = {
   sessionParticipantId: string;
@@ -176,6 +177,7 @@ export function RoundForm(props: RoundFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-5 p-5 md:p-6" data-testid="round-form" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving round..." />
       <div>
         <h2 className="app-section-title">Finishing order</h2>
       </div>

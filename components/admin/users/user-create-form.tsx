@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { createManagedUserAction, type AdminUserFormState } from "@/actions/admin-users";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type PlayerOption = {
@@ -33,6 +34,7 @@ export function UserCreateForm({ players }: UserCreateFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-4 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Creating user..." />
       <Field id="name" label="Name" error={state.fieldErrors?.name}>
         <input
           id="name"

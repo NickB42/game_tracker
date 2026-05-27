@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { createGameSessionAction, type SessionFormState, updateGameSessionAction } from "@/actions/sessions";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 
 type SelectablePlayer = {
   id: string;
@@ -93,6 +94,7 @@ export function SessionForm(props: SessionFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving session..." />
       <Field id="activityType" label="Activity" error={state.fieldErrors?.activityType}>
         <select
           id="activityType"

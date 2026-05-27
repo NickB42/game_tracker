@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 
 import { joinOnlineLobbyAction, type OnlineLobbyFormState } from "@/actions/online";
 import { FormSubmitButton } from "@/components/ui/form-actions";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 export function JoinLobbyForm() {
@@ -25,6 +26,7 @@ export function JoinLobbyForm() {
 
   return (
     <form action={formAction} className="app-card space-y-3 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Joining lobby..." />
       <h2 className="app-section-title">Join Lobby</h2>
       <label htmlFor="code" className="app-field-label block">
         Join code

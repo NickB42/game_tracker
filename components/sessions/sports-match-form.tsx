@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { createSportsMatchAction, type SportsMatchFormState, updateSportsMatchAction } from "@/actions/matches";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 
 type ParticipantOption = {
   sessionParticipantId: string;
@@ -79,6 +80,7 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving match..." />
       <FormSection
         title={props.activityType === "SQUASH" ? "Players" : "Teams"}
         description={

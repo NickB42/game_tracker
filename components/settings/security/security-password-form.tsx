@@ -6,6 +6,7 @@ import Link from "next/link";
 import { changeOwnPasswordAction, type SecurityFormState } from "@/actions/account-security";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type SecurityPasswordFormProps = {
@@ -50,6 +51,7 @@ export function SecurityPasswordForm({ isForcedFlow = false }: SecurityPasswordF
       data-testid="force-password-change-form"
       aria-busy={isPending}
     >
+      <PendingInteractionLock active={isPending} label="Saving password..." />
       <Field id="currentPassword" label="Current password" error={state.fieldErrors?.currentPassword}>
         <input
           id="currentPassword"

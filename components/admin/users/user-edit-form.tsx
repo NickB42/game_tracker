@@ -10,6 +10,7 @@ import {
 } from "@/actions/admin-users";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type PlayerOption = {
@@ -71,6 +72,7 @@ export function UserEditForm({ user, players }: UserEditFormProps) {
 
   return (
     <div className="space-y-5">
+      <PendingInteractionLock active={isUpdating || isResetting} label={isResetting ? "Updating password..." : "Saving user..."} />
       <form action={updateFormAction} className="app-card space-y-4 p-6" aria-busy={isUpdating}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="email" label="Email" hint="Email is immutable after account creation.">

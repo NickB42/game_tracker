@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { createGroupAction, type GroupFormState, updateGroupAction } from "@/actions/groups";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { Field, FormSection } from "@/components/ui/form-primitives";
+import { PendingInteractionLock } from "@/components/ui/interaction-lock";
 import { useToast } from "@/components/ui/toast";
 
 type SelectablePlayer = {
@@ -73,6 +74,7 @@ export function GroupForm(props: GroupFormProps) {
 
   return (
     <form action={formAction} className="app-card space-y-5 p-6" aria-busy={isPending}>
+      <PendingInteractionLock active={isPending} label="Saving group..." />
       <Field id="activityType" label="Activity" error={state.fieldErrors?.activityType}>
         <select id="activityType" name="activityType" defaultValue={defaults?.activityType ?? "CARD"} className="app-select">
           <option value="CARD">Card</option>
