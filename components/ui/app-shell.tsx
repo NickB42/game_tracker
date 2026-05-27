@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 
@@ -64,7 +64,9 @@ export function AppShell({ children, user }: AppShellProps) {
 
   return (
     <ToastProvider>
-      <FlashToast />
+      <Suspense fallback={null}>
+        <FlashToast />
+      </Suspense>
       <div className="app-shell min-h-screen">
         <header className="app-topbar">
           <div className="app-page-container flex flex-wrap items-center justify-between gap-4 py-4">
