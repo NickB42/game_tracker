@@ -211,7 +211,7 @@ export function SportsMatchForm(props: SportsMatchFormProps) {
       ) : (
         <FormSection
           title="Set scores"
-          description="Enter at least one tennis-style set score. Add sets 2 and 3 only when those sets were played."
+          description="Enter at least one padel set score. Add sets 2 and 3 only when those sets were played."
         >
           <div className="space-y-3">
             {[1, 2, 3].map((setNumber, index) => (
