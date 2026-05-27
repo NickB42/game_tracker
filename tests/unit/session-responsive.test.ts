@@ -248,6 +248,16 @@ describe("Session detail and result action polish", () => {
     assert(!source.includes("ActivityBadge"));
   });
 
+  it("links grouped sessions to group leaderboards and ungrouped sessions to global leaderboards", async () => {
+    const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
+    const source = testModule.default.toString();
+
+    assert(source.includes("gameSession.group"));
+    assert(source.includes("/dashboard/leaderboards/groups/"));
+    assert(source.includes("/dashboard/leaderboards/global?activity="));
+    assert(source.includes("leaderboardLabel"));
+  });
+
   it("links card sessions to the new round route", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
     const source = testModule.default.toString();
