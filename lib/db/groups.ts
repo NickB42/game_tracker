@@ -63,14 +63,10 @@ export async function getGroups(actor: AuthorizationActor) {
   return prisma.group.findMany({
     where: buildGroupVisibilityWhere(actor),
     orderBy: { name: "asc" },
-    include: {
-      owner: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
+    select: {
+      id: true,
+      name: true,
+      ownerUserId: true,
       trustedAdmins: {
         where: {
           userId: actor.id,

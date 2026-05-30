@@ -1,4 +1,5 @@
 import type { ActivityType } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
 import { buildGroupVisibilityWhere, type AuthorizationActor } from "@/lib/domain/authorization";
@@ -74,7 +75,8 @@ export function buildSportsMatchHistoryWhere(filter: GroupFilter) {
 async function getRoundHistory(filter?: GroupFilter) {
   return prisma.roundResult.findMany({
     where: buildCardRoundHistoryWhere(filter ?? { activityType: "CARD" }),
-    include: {
+    select: {
+      sequenceNumber: true,
       gameSession: {
         select: {
           id: true,
@@ -83,7 +85,8 @@ async function getRoundHistory(filter?: GroupFilter) {
       },
       placements: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-        include: {
+        select: {
+          position: true,
           sessionParticipant: {
             select: {
               id: true,
@@ -105,7 +108,8 @@ async function getRoundHistory(filter?: GroupFilter) {
 async function getSportsMatchHistory(filter: GroupFilter) {
   return prisma.match.findMany({
     where: buildSportsMatchHistoryWhere(filter),
-    include: {
+    select: {
+      sequenceNumber: true,
       gameSession: {
         select: {
           id: true,
@@ -114,7 +118,8 @@ async function getSportsMatchHistory(filter: GroupFilter) {
       },
       participants: {
         orderBy: [{ sideNumber: "asc" }, { seatOrder: "asc" }, { createdAt: "asc" }],
-        include: {
+        select: {
+          sideNumber: true,
           player: {
             select: {
               id: true,
@@ -344,9 +349,16 @@ async function buildLeaderboard(filter: GroupFilter): Promise<ActivityLeaderboar
 }
 
 export async function getGlobalLeaderboard(options?: { activityType?: ActivityType }): Promise<ActivityLeaderboard> {
-  return buildLeaderboard({
-    activityType: options?.activityType ?? "CARD",
-  });
+  const activityType = options?.activityType ?? "CARD";
+
+  return unstable_cache(
+    async () => buildLeaderboard({ activityType }),
+    ["leaderboard", "global", activityType],
+    {
+      revalidate: 60,
+      tags: ["leaderboard:global"],
+    },
+  )();
 }
 
 export async function getGroupLeaderboard(
@@ -370,5 +382,6 @@ export async function getGroupLeaderboard(
 
   const activityType = options?.activityType ?? "CARD";
 
+  // TODO: Cache group leaderboards only after cache keys include actor-visible scope or mutations can revalidate safely.
   return buildLeaderboard({ groupId, activityType });
 }

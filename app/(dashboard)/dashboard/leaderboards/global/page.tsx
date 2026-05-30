@@ -6,6 +6,7 @@ import { ArrowLeftIcon } from "@/components/ui/icons";
 import { AppButton, PageHeader } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGlobalLeaderboard } from "@/lib/db/leaderboards";
+import { measureAsync } from "@/lib/server/timing";
 
 function parseActivity(value: string | undefined): ActivityType {
   if (value === "SQUASH" || value === "PADEL") {
@@ -22,10 +23,12 @@ type GlobalLeaderboardPageProps = {
 };
 
 export default async function GlobalLeaderboardPage({ searchParams }: GlobalLeaderboardPageProps) {
-  await requireAuthenticatedUser();
+  await measureAsync("dashboard.leaderboards.global.auth", () => requireAuthenticatedUser());
   const { activity } = await searchParams;
   const activityType = parseActivity(activity);
-  const leaderboard = await getGlobalLeaderboard({ activityType });
+  const leaderboard = await measureAsync("dashboard.leaderboards.global.compute", () =>
+    getGlobalLeaderboard({ activityType }),
+  );
 
   return (
     <section className="space-y-6">

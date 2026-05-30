@@ -6,12 +6,15 @@ import { AppButton, EmptyState, PageHeader, StatusBadge } from "@/components/ui/
 import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getPlayers } from "@/lib/db/players";
+import { measureAsync } from "@/lib/server/timing";
 
 export default async function PlayersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const user = await requireAuthenticatedUser();
+  const user = await measureAsync("dashboard.players.auth", () => requireAuthenticatedUser());
   const { page: pageParam } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
-  const { players, hasNextPage } = await getPlayers({ includeInactive: true, page: currentPage });
+  const { players, hasNextPage } = await measureAsync("dashboard.players.list", () =>
+    getPlayers({ includeInactive: true, page: currentPage }),
+  );
 
   return (
     <section className="space-y-6">

@@ -1,35 +1,11 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 import { AppCard, AppButton, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
-import { auth } from "@/lib/auth/auth";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
-import { prisma } from "@/lib/db/prisma";
+import { measureAsync } from "@/lib/server/timing";
 
 export default async function DashboardPage() {
-  await requireAuthenticatedUser();
-
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      name: true,
-      role: true,
-      playerId: true,
-    },
-  });
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await measureAsync("dashboard.page.auth", () => requireAuthenticatedUser());
 
   return (
     <section className="space-y-6" data-testid="dashboard-auth-shell">
