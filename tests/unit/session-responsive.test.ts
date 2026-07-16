@@ -382,12 +382,46 @@ describe("Session detail and result action polish", () => {
     assert(!source.includes("Score:"));
   });
 
-  it("summarizes sports sessions with match wins", async () => {
+  it("renders Elo gains and losses alongside completed sports matches", async () => {
+    const { SportsMatchesSection } = await import("@/components/sessions/sports-matches-section");
+
+    const markup = renderToStaticMarkup(
+      createElement(SportsMatchesSection, {
+        gameSessionId: "session-1",
+        activityType: "SQUASH",
+        canManageSession: false,
+        matches: [
+          {
+            id: "match-1",
+            sequenceNumber: 1,
+            notes: null,
+            participants: [
+              { id: "participant-1", sideNumber: 1, player: { id: "player-1", displayName: "Alice", isActive: true } },
+              { id: "participant-2", sideNumber: 2, player: { id: "player-2", displayName: "Bob", isActive: true } },
+            ],
+            result: { winningSideNumber: 1, scoreLines: [] },
+            eloChanges: [
+              { playerId: "player-1", delta: 16 },
+              { playerId: "player-2", delta: -16 },
+            ],
+          },
+        ],
+      }),
+    );
+
+    assert(markup.includes("Elo"));
+    assert(markup.includes("+16"));
+    assert(markup.includes("-16"));
+  });
+
+  it("summarizes sports sessions with match wins and net Elo changes", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
     const source = testModule.default.toString();
 
     assert(source.includes("buildSportsSessionSummary"));
     assert(source.includes("matchWins"));
+    assert(source.includes("eloDelta"));
     assert(source.includes("Match wins"));
+    assert(source.includes("Elo +/-"));
   });
 });

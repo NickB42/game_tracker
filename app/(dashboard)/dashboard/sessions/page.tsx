@@ -9,6 +9,7 @@ import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateSession, canEditSession } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
 import { getGameSessions } from "@/lib/db/sessions";
+import { measureAsync } from "@/lib/server/timing";
 import {
   buildNewSessionHref,
   buildSessionsHref,
@@ -24,7 +25,6 @@ type SessionListRow = {
   playedAt: Date;
   updatedAt: Date;
   group: { id: string; name: string } | null;
-  createdByUser: { id: string; name: string } | null;
   ownerUserId: string;
   trustedAdmins: Array<{ id: string; userId: string }>;
   _count: {
@@ -52,7 +52,7 @@ type SessionsPageProps = {
 };
 
 export default async function SessionsPage({ searchParams }: SessionsPageProps) {
-  const user = await requireAuthenticatedUser();
+  const user = await measureAsync("dashboard.sessions.auth", () => requireAuthenticatedUser());
   const { activity, groupId, page: pageParam } = await searchParams;
   const activityFilter = parseSessionsActivityFilter(activity);
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
@@ -60,12 +60,14 @@ export default async function SessionsPage({ searchParams }: SessionsPageProps) 
   const rawGroupId = groupId ?? undefined;
 
   const [groups, { sessions: rawSessions, hasNextPage }] = await Promise.all([
-    getGroups(user),
-    getGameSessions(user, {
-      activityType: activityFilter === "ALL" ? undefined : activityFilter,
-      groupId: rawGroupId,
-      page: currentPage,
-    }),
+    measureAsync("dashboard.sessions.groups", () => getGroups(user)),
+    measureAsync("dashboard.sessions.list", () =>
+      getGameSessions(user, {
+        activityType: activityFilter === "ALL" ? undefined : activityFilter,
+        groupId: rawGroupId,
+        page: currentPage,
+      }),
+    ),
   ]);
 
   const validGroupId = rawGroupId && groups.some((group) => group.id === rawGroupId) ? rawGroupId : undefined;

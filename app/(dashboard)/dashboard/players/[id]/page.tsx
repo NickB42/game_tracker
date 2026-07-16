@@ -1,25 +1,55 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ActivityType } from "@prisma/client";
 
+import { RatingHistoryChart } from "@/components/leaderboards/rating-history-chart";
 import { AppButton, Divider, EmptyState, InfoRow, PageHeader, SectionCard, StatCard, StatusBadge } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { getGlobalLeaderboard } from "@/lib/db/leaderboards";
 import { getPlayerById } from "@/lib/db/players";
 
 type PlayerDetailPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    activity?: string;
+  }>;
 };
 
-export default async function PlayerDetailPage({ params }: PlayerDetailPageProps) {
-  const user = await requireAuthenticatedUser();
-  const { id } = await params;
+function parseActivity(value: string | undefined): ActivityType {
+  if (value === "SQUASH" || value === "PADEL") {
+    return value;
+  }
 
-  const player = await getPlayerById(id);
+  return "CARD";
+}
+
+function formatRatingDelta(value: number) {
+  const rounded = Number(value.toFixed(1));
+  return `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}`;
+}
+
+export default async function PlayerDetailPage({ params, searchParams }: PlayerDetailPageProps) {
+  const user = await requireAuthenticatedUser();
+  const [{ id }, { activity }] = await Promise.all([params, searchParams]);
+  const activityType = parseActivity(activity);
+
+  const [player, leaderboard] = await Promise.all([
+    getPlayerById(id),
+    getGlobalLeaderboard({ activityType }),
+  ]);
 
   if (!player) {
     notFound();
   }
+
+  const ratingRow = leaderboard.rows.find((row) => row.playerId === player.id);
+  const playerHistory = leaderboard.history.filter((entry) => entry.playerId === player.id);
+  const historyPoints = playerHistory[0]?.points ?? [];
+  const peakRating = historyPoints.length > 0 ? Math.max(...historyPoints.map((point) => point.rating)) : null;
+  const totalRatingChange = historyPoints.reduce((total, point) => total + point.delta, 0);
+  const ratingLabel = activityType === "CARD" ? "OpenSkill" : "Elo";
 
   return (
     <section className="space-y-6">
@@ -51,6 +81,43 @@ export default async function PlayerDetailPage({ params }: PlayerDetailPageProps
           <Divider />
           <InfoRow label="Display name" value={player.displayName} />
         </dl>
+      </SectionCard>
+
+      <SectionCard title="Global rating history">
+        <div className="mb-4 flex flex-wrap gap-2" aria-label="Rating history activity">
+          {[
+            { value: "CARD", label: "Card" },
+            { value: "SQUASH", label: "Squash" },
+            { value: "PADEL", label: "Padel" },
+          ].map((entry) => (
+            <Link
+              key={entry.value}
+              href={`/dashboard/players/${player.id}?activity=${entry.value}`}
+              className={`app-button ${activityType === entry.value ? "app-button-primary" : "app-button-ghost"}`}
+            >
+              {entry.label}
+            </Link>
+          ))}
+        </div>
+
+        {historyPoints.length > 0 ? (
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <StatCard label={`Current ${ratingLabel}`} value={ratingRow?.displayedRating.toFixed(1) ?? "-"} tone="accent" />
+            <StatCard label={`Peak ${ratingLabel}`} value={peakRating?.toFixed(1) ?? "-"} tone="success" />
+            <StatCard
+              label="Total change"
+              value={formatRatingDelta(totalRatingChange)}
+              tone={totalRatingChange > 0 ? "success" : totalRatingChange < 0 ? "warning" : "default"}
+            />
+          </div>
+        ) : null}
+
+        <RatingHistoryChart
+          key={`player-${player.id}-${activityType}`}
+          series={playerHistory}
+          activityType={activityType}
+          focusPlayerId={player.id}
+        />
       </SectionCard>
 
       <SectionCard title="Notes">

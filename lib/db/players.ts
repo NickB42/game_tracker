@@ -27,7 +27,10 @@ export async function getPlayers(options?: { includeInactive?: boolean; page?: n
     orderBy: { displayName: "asc" },
     take: pageSize + 1,
     skip: (page - 1) * pageSize,
-    include: {
+    select: {
+      id: true,
+      displayName: true,
+      isActive: true,
       _count: {
         select: {
           groupMemberships: true,

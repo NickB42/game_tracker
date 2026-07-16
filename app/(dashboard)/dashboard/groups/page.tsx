@@ -7,10 +7,11 @@ import { ResponsiveList } from "@/components/ui/responsive-list";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canCreateGroup, canEditGroup } from "@/lib/domain/authorization";
 import { getGroups } from "@/lib/db/groups";
+import { measureAsync } from "@/lib/server/timing";
 
 export default async function GroupsPage() {
-  const user = await requireAuthenticatedUser();
-  const groups = await getGroups(user);
+  const user = await measureAsync("dashboard.groups.auth", () => requireAuthenticatedUser());
+  const groups = await measureAsync("dashboard.groups.list", () => getGroups(user));
 
   return (
     <section className="space-y-6">

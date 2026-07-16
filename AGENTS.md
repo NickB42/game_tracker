@@ -244,7 +244,9 @@ Leaderboard data lives in `lib/db/leaderboards.ts`.
 - Default activity is `CARD` when absent.
 - Card history reads round results.
 - Sports history reads completed matches with valid winning side.
-- History window is controlled by `LEADERBOARD_HISTORY_MONTHS`.
+- Leaderboard ratings use all non-archived historical results. A bounded history window should only be introduced as part of an explicit season model.
+- Global and group leaderboard pages expose standings and rating-history tabs for the selected activity and scope.
+- Rating history is aggregated to one point per player per session. Player detail pages show global rating history by activity.
 
 Do not add group activity mismatch checks. They are intentionally gone.
 

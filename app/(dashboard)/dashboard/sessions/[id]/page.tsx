@@ -9,6 +9,7 @@ import { AppButton, DataTable, Divider, EmptyState, InfoRow, PageHeader, Section
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getSportsMatchesByGameSessionId } from "@/lib/db/matches";
+import { getSportsMatchEloChangesByMatchId } from "@/lib/db/leaderboards";
 import { getRoundsByGameSessionId, getSessionRoundSummary } from "@/lib/db/rounds";
 import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 
@@ -52,6 +53,7 @@ type SportsSessionSummaryRow = {
   playerId: string;
   playerDisplayName: string;
   matchWins: number;
+  eloDelta: number;
 };
 
 type SportsMatchView = {
@@ -76,6 +78,10 @@ type SportsMatchView = {
       score: number;
     }>;
   } | null;
+  eloChanges: Array<{
+    playerId: string;
+    delta: number;
+  }>;
 };
 
 type GameSessionDetailPageProps = {
@@ -96,6 +102,11 @@ function formatDateTime(value: Date) {
   return dateFormatter.format(value);
 }
 
+function formatEloDelta(delta: number) {
+  const roundedDelta = Math.round(delta);
+  return `${roundedDelta > 0 ? "+" : ""}${roundedDelta}`;
+}
+
 function buildSportsSessionSummary(gameSession: SessionDetailView, sportsMatches: SportsMatchView[]) {
   const rowsByPlayerId = new Map<string, SportsSessionSummaryRow>();
 
@@ -105,10 +116,19 @@ function buildSportsSessionSummary(gameSession: SessionDetailView, sportsMatches
       playerId: participant.player.id,
       playerDisplayName: participant.player.displayName,
       matchWins: 0,
+      eloDelta: 0,
     });
   }
 
   for (const match of sportsMatches) {
+    for (const change of match.eloChanges) {
+      const row = rowsByPlayerId.get(change.playerId);
+
+      if (row) {
+        row.eloDelta += change.delta;
+      }
+    }
+
     const winningSideNumber = match.result?.winningSideNumber;
 
     if (!winningSideNumber) {
@@ -162,8 +182,17 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
     rounds = roundsRaw as RoundView[];
     summary = summaryRaw as SessionSummaryView;
   } else {
-    const sportsMatchesRaw = await getSportsMatchesByGameSessionId(id);
-    sportsMatches = sportsMatchesRaw as SportsMatchView[];
+    const [sportsMatchesRaw, eloChangesByMatchId] = await Promise.all([
+      getSportsMatchesByGameSessionId(id),
+      getSportsMatchEloChangesByMatchId(id, {
+        activityType: gameSession.activityType,
+        ...(gameSession.groupId ? { groupId: gameSession.groupId } : {}),
+      }),
+    ]);
+    sportsMatches = sportsMatchesRaw.map((match) => ({
+      ...match,
+      eloChanges: eloChangesByMatchId.get(match.id) ?? [],
+    })) as SportsMatchView[];
   }
 
   const matchWinnerNameSet = new Set(
@@ -306,6 +335,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
                       <tr>
                         <th>Player</th>
                         <th>Match wins</th>
+                        <th>Elo +/-</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -317,6 +347,19 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
                             </Link>
                           </td>
                           <td>{participant.matchWins}</td>
+                          <td className="tabular-nums">
+                            <span
+                              className={
+                                participant.eloDelta > 0
+                                  ? "font-semibold text-[var(--success)]"
+                                  : participant.eloDelta < 0
+                                    ? "font-semibold text-[var(--danger)]"
+                                    : "text-[var(--text-muted)]"
+                              }
+                            >
+                              {formatEloDelta(participant.eloDelta)}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

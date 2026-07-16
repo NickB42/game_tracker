@@ -8,6 +8,8 @@ export type EloMatchParticipant = {
 };
 
 export type EloMatchEvent = {
+  id?: string;
+  sessionId?: string;
   playedAt: Date;
   sequenceNumber: number;
   participants: EloMatchParticipant[];
@@ -16,6 +18,19 @@ export type EloMatchEvent = {
 
 export type EloRatingSnapshot = {
   rating: number;
+};
+
+export type EloMatchRatingChange = {
+  playerId: string;
+  sideNumber: 1 | 2;
+  ratingBefore: number;
+  ratingAfter: number;
+  delta: number;
+};
+
+export type EloMatchRatingUpdate = {
+  event: EloMatchEvent;
+  changes: EloMatchRatingChange[];
 };
 
 function sortMatchEvents(events: EloMatchEvent[]): EloMatchEvent[] {
@@ -43,8 +58,9 @@ function expectedScore(opponentRating: number, ownRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - ownRating) / ELO_SCALE));
 }
 
-export function computeEloRatingsFromMatchHistory(events: EloMatchEvent[]): Map<string, EloRatingSnapshot> {
+export function computeEloRatingUpdatesFromMatchHistory(events: EloMatchEvent[]): EloMatchRatingUpdate[] {
   const ratingsByPlayerId = new Map<string, number>();
+  const updates: EloMatchRatingUpdate[] = [];
 
   for (const event of sortMatchEvents(events)) {
     const sideOnePlayerIds = event.participants
@@ -70,15 +86,47 @@ export function computeEloRatingsFromMatchHistory(events: EloMatchEvent[]): Map<
 
     const sideOneDelta = ELO_K_FACTOR * (actualSideOne - expectedSideOne);
     const sideTwoDelta = ELO_K_FACTOR * (actualSideTwo - expectedSideTwo);
+    const changes: EloMatchRatingChange[] = [];
 
     for (const playerId of sideOnePlayerIds) {
       const currentRating = ratingsByPlayerId.get(playerId) ?? ELO_BASE_RATING;
-      ratingsByPlayerId.set(playerId, currentRating + sideOneDelta);
+      const nextRating = currentRating + sideOneDelta;
+      ratingsByPlayerId.set(playerId, nextRating);
+      changes.push({
+        playerId,
+        sideNumber: 1,
+        ratingBefore: currentRating,
+        ratingAfter: nextRating,
+        delta: sideOneDelta,
+      });
     }
 
     for (const playerId of sideTwoPlayerIds) {
       const currentRating = ratingsByPlayerId.get(playerId) ?? ELO_BASE_RATING;
-      ratingsByPlayerId.set(playerId, currentRating + sideTwoDelta);
+      const nextRating = currentRating + sideTwoDelta;
+      ratingsByPlayerId.set(playerId, nextRating);
+      changes.push({
+        playerId,
+        sideNumber: 2,
+        ratingBefore: currentRating,
+        ratingAfter: nextRating,
+        delta: sideTwoDelta,
+      });
+    }
+
+    updates.push({ event, changes });
+  }
+
+  return updates;
+}
+
+export function computeEloRatingsFromMatchHistory(events: EloMatchEvent[]): Map<string, EloRatingSnapshot> {
+  const updates = computeEloRatingUpdatesFromMatchHistory(events);
+  const ratingsByPlayerId = new Map<string, number>();
+
+  for (const update of updates) {
+    for (const change of update.changes) {
+      ratingsByPlayerId.set(change.playerId, change.ratingAfter);
     }
   }
 

@@ -74,24 +74,17 @@ export async function getGameSessions(
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
     take: pageSize + 1,
     skip: (page - 1) * pageSize,
-    include: {
+    select: {
+      id: true,
+      activityType: true,
+      title: true,
+      playedAt: true,
+      updatedAt: true,
+      ownerUserId: true,
       group: {
         select: {
           id: true,
           name: true,
-        },
-      },
-      createdByUser: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      ownerUser: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
         },
       },
       trustedAdmins: {
