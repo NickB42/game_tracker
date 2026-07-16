@@ -41,16 +41,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Berlin",
 });
 
-function getSeriesColor(playerId: string) {
-  let hash = 0;
-
-  for (const character of playerId) {
-    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  }
-
-  return SERIES_COLORS[hash % SERIES_COLORS.length] ?? SERIES_COLORS[0];
-}
-
 function formatRating(value: number) {
   return value.toFixed(1);
 }
@@ -110,6 +100,9 @@ export function RatingHistoryChart({
   const selectedPoints = selectedSeries.flatMap((entry) => entry.points);
   const scalePoints = selectedPoints.length > 0 ? selectedPoints : (series[0]?.points ?? []);
   const ratingLabel = activityType === "CARD" ? "OpenSkill" : "Elo";
+  const colorByPlayerId = new Map(
+    series.map((entry, index) => [entry.playerId, SERIES_COLORS[index % SERIES_COLORS.length] ?? SERIES_COLORS[0]]),
+  );
 
   function togglePlayer(playerId: string) {
     setSelectedPlayerIds((current) => {
@@ -156,34 +149,29 @@ export function RatingHistoryChart({
 
   return (
     <div className="space-y-4" data-testid="rating-history-chart">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-[var(--text-muted)]">
-          One point per session. Lines remain flat until the next recorded result.
-        </p>
-        {series.length > maxInitialSeries ? (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="app-button app-button-ghost"
-              onClick={() => setSelectedPlayerIds(new Set(series.slice(0, maxInitialSeries).map((entry) => entry.playerId)))}
-            >
-              Top {Math.min(maxInitialSeries, series.length)}
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-ghost"
-              onClick={() => setSelectedPlayerIds(new Set(series.map((entry) => entry.playerId)))}
-            >
-              Show all
-            </button>
-          </div>
-        ) : null}
-      </div>
+      {series.length > maxInitialSeries ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            className="app-button app-button-ghost"
+            onClick={() => setSelectedPlayerIds(new Set(series.slice(0, maxInitialSeries).map((entry) => entry.playerId)))}
+          >
+            Top {Math.min(maxInitialSeries, series.length)}
+          </button>
+          <button
+            type="button"
+            className="app-button app-button-ghost"
+            onClick={() => setSelectedPlayerIds(new Set(series.map((entry) => entry.playerId)))}
+          >
+            Show all
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2" aria-label="Players shown in rating history">
         {series.map((entry) => {
           const selected = selectedPlayerIds.has(entry.playerId);
-          const color = getSeriesColor(entry.playerId);
+          const color = colorByPlayerId.get(entry.playerId) ?? SERIES_COLORS[0];
 
           return (
             <button
@@ -267,7 +255,7 @@ export function RatingHistoryChart({
             })}
 
             {selectedSeries.map((entry) => {
-              const color = getSeriesColor(entry.playerId);
+              const color = colorByPlayerId.get(entry.playerId) ?? SERIES_COLORS[0];
 
               return (
                 <g key={entry.playerId}>

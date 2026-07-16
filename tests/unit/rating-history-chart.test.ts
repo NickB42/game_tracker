@@ -46,6 +46,21 @@ describe("RatingHistoryChart", () => {
               },
             ],
           },
+          {
+            playerId: "player-2",
+            playerDisplayName: "Bob",
+            points: [
+              {
+                sessionId: "session-1",
+                sessionTitle: "Monday squash",
+                playedAt: "2026-01-01T10:00:00.000Z",
+                sequenceNumber: 1,
+                order: 0,
+                rating: 1484,
+                delta: -16,
+              },
+            ],
+          },
         ],
       }),
     );
@@ -55,5 +70,8 @@ describe("RatingHistoryChart", () => {
     assert(markup.includes("Elo rating history"));
     assert(markup.includes("Monday squash"));
     assert(markup.includes('/dashboard/sessions/session-1'));
+    assert(markup.includes("#2563eb"));
+    assert(markup.includes("#dc2626"));
+    assert(!markup.includes("One point per session"));
   });
 });
