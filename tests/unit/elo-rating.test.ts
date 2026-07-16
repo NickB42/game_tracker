@@ -1,7 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { computeEloRatingsFromMatchHistory, ELO_BASE_RATING } from "@/lib/rating/elo";
+import {
+  computeEloRatingUpdatesFromMatchHistory,
+  computeEloRatingsFromMatchHistory,
+  ELO_BASE_RATING,
+} from "@/lib/rating/elo";
 
 describe("elo ratings", () => {
   it("applies expected 1v1 deltas from equal starting ratings", () => {
@@ -71,5 +75,25 @@ describe("elo ratings", () => {
     const second = computeEloRatingsFromMatchHistory(events);
 
     assert.deepEqual(first, second);
+  });
+
+  it("reports the rating gained and lost for each individual match", () => {
+    const updates = computeEloRatingUpdatesFromMatchHistory([
+      {
+        id: "match-1",
+        playedAt: new Date("2026-01-01T10:00:00Z"),
+        sequenceNumber: 1,
+        winningSideNumber: 1,
+        participants: [
+          { playerId: "p1", sideNumber: 1 },
+          { playerId: "p2", sideNumber: 2 },
+        ],
+      },
+    ]);
+
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0]?.event.id, "match-1");
+    assert.equal(updates[0]?.changes.find((change) => change.playerId === "p1")?.delta, 16);
+    assert.equal(updates[0]?.changes.find((change) => change.playerId === "p2")?.delta, -16);
   });
 });

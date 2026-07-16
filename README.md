@@ -205,6 +205,8 @@ PLAYWRIGHT_BASE_URL="https://your-preview-url.vercel.app" npm run test:perf
 
 The benchmark logs median and p95 navigation timings for `/dashboard`, `/dashboard/sessions`, `/dashboard/groups`, `/dashboard/players`, and the global card leaderboard. Configure sample size with `PERF_ITERATIONS` and `PERF_WARMUPS`. Optional guardrails are available through `PERF_MAX_MEDIAN_MS` and `PERF_MAX_P95_MS`.
 
+If the target Vercel deployment uses Deployment Protection, generate a Protection Bypass for Automation secret in Vercel and pass it as `VERCEL_AUTOMATION_BYPASS_SECRET`. Playwright sends it as `x-vercel-protection-bypass` and sets the bypass cookie for browser navigations.
+
 ### 6. Important caveats
 
 - Never commit real credentials.

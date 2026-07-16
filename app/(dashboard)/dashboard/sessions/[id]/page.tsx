@@ -9,6 +9,7 @@ import { AppButton, DataTable, Divider, EmptyState, InfoRow, PageHeader, Section
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { canEditSession } from "@/lib/domain/authorization";
 import { getSportsMatchesByGameSessionId } from "@/lib/db/matches";
+import { getSportsMatchEloChangesByMatchId } from "@/lib/db/leaderboards";
 import { getRoundsByGameSessionId, getSessionRoundSummary } from "@/lib/db/rounds";
 import { getGameSessionAuthorizationContext, getGameSessionById } from "@/lib/db/sessions";
 
@@ -76,6 +77,10 @@ type SportsMatchView = {
       score: number;
     }>;
   } | null;
+  eloChanges: Array<{
+    playerId: string;
+    delta: number;
+  }>;
 };
 
 type GameSessionDetailPageProps = {
@@ -162,8 +167,17 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
     rounds = roundsRaw as RoundView[];
     summary = summaryRaw as SessionSummaryView;
   } else {
-    const sportsMatchesRaw = await getSportsMatchesByGameSessionId(id);
-    sportsMatches = sportsMatchesRaw as SportsMatchView[];
+    const [sportsMatchesRaw, eloChangesByMatchId] = await Promise.all([
+      getSportsMatchesByGameSessionId(id),
+      getSportsMatchEloChangesByMatchId(id, {
+        activityType: gameSession.activityType,
+        ...(gameSession.groupId ? { groupId: gameSession.groupId } : {}),
+      }),
+    ]);
+    sportsMatches = sportsMatchesRaw.map((match) => ({
+      ...match,
+      eloChanges: eloChangesByMatchId.get(match.id) ?? [],
+    })) as SportsMatchView[];
   }
 
   const matchWinnerNameSet = new Set(

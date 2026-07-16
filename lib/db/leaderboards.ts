@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
 import { buildGroupVisibilityWhere, type AuthorizationActor } from "@/lib/domain/authorization";
-import type { EloMatchEvent } from "@/lib/rating/elo";
+import { computeEloRatingUpdatesFromMatchHistory, type EloMatchEvent } from "@/lib/rating/elo";
 import type { RatingRoundEvent } from "@/lib/rating/openskill";
 import { computeActivityRatings, getRatingSystemForActivity, type RatingSystem } from "@/lib/rating/strategy";
 
@@ -109,6 +109,7 @@ async function getSportsMatchHistory(filter: GroupFilter) {
   return prisma.match.findMany({
     where: buildSportsMatchHistoryWhere(filter),
     select: {
+      id: true,
       sequenceNumber: true,
       gameSession: {
         select: {
@@ -136,6 +137,47 @@ async function getSportsMatchHistory(filter: GroupFilter) {
     },
     orderBy: [{ gameSession: { playedAt: "asc" } }, { sequenceNumber: "asc" }, { createdAt: "asc" }, { id: "asc" }],
   });
+}
+
+export async function getSportsMatchEloChangesByMatchId(gameSessionId: string, filter: GroupFilter) {
+  const matches = await getSportsMatchHistory(filter);
+  const events: EloMatchEvent[] = [];
+  const targetMatchIds = new Set<string>();
+
+  for (const match of matches) {
+    if (match.result?.winningSideNumber !== 1 && match.result?.winningSideNumber !== 2) {
+      continue;
+    }
+
+    events.push({
+      id: match.id,
+      playedAt: match.gameSession.playedAt,
+      sequenceNumber: match.sequenceNumber,
+      winningSideNumber: match.result.winningSideNumber,
+      participants: match.participants
+        .filter((participant) => participant.sideNumber === 1 || participant.sideNumber === 2)
+        .map((participant) => ({
+          playerId: participant.player.id,
+          sideNumber: participant.sideNumber as 1 | 2,
+        })),
+    });
+
+    if (match.gameSession.id === gameSessionId) {
+      targetMatchIds.add(match.id);
+    }
+  }
+
+  return new Map(
+    computeEloRatingUpdatesFromMatchHistory(events)
+      .filter((update) => update.event.id && targetMatchIds.has(update.event.id))
+      .map((update) => [
+        update.event.id as string,
+        update.changes.map((change) => ({
+          playerId: change.playerId,
+          delta: change.delta,
+        })),
+      ]),
+  );
 }
 
 function getOrCreateStats(

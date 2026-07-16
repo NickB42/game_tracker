@@ -27,6 +27,10 @@ type SportsMatchView = {
       score: number;
     }>;
   } | null;
+  eloChanges?: Array<{
+    playerId: string;
+    delta: number;
+  }>;
 };
 
 type SportsMatchesSectionProps = {
@@ -62,6 +66,16 @@ function getScoreColumns(match: SportsMatchView) {
   }
 
   return [...setsBySequence.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+function getSideEloDelta(match: SportsMatchView, sideNumber: number) {
+  const sidePlayerIds = new Set(getSidePlayers(match, sideNumber).map((participant) => participant.player.id));
+  return match.eloChanges?.find((change) => sidePlayerIds.has(change.playerId))?.delta ?? null;
+}
+
+function formatEloDelta(delta: number) {
+  const roundedDelta = Math.round(delta);
+  return `${roundedDelta > 0 ? "+" : ""}${roundedDelta}`;
 }
 
 function renderSidePlayers(match: SportsMatchView, sideNumber: number, winningSideNumber: number | null) {
@@ -111,6 +125,7 @@ export function SportsMatchesSection({ gameSessionId, activityType, canManageSes
           {matches.map((match) => {
             const winningSideNumber = match.result?.winningSideNumber ?? null;
             const scoreColumns = getScoreColumns(match);
+            const hasEloChanges = (match.eloChanges?.length ?? 0) > 0;
 
             return (
               <li key={match.id} className="app-card-muted space-y-3 px-4 py-3 text-sm">
@@ -140,7 +155,7 @@ export function SportsMatchesSection({ gameSessionId, activityType, canManageSes
                 <div className="overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--border)]">
                   <div
                     className="grid items-center bg-[var(--surface-muted)] text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
-                    style={{ gridTemplateColumns: `minmax(0, 1fr) repeat(${Math.max(scoreColumns.length, 1)}, minmax(2rem, max-content))` }}
+                    style={{ gridTemplateColumns: `minmax(0, 1fr) repeat(${Math.max(scoreColumns.length, 1)}, minmax(2rem, max-content))${hasEloChanges ? " minmax(3.5rem, max-content)" : ""}` }}
                   >
                     <div className="px-3 py-2">Side</div>
                     {scoreColumns.length > 0 ? (
@@ -152,31 +167,47 @@ export function SportsMatchesSection({ gameSessionId, activityType, canManageSes
                     ) : (
                       <div className="px-2 py-2 text-center">Score</div>
                     )}
+                    {hasEloChanges ? <div className="px-2 py-2 text-center">Elo</div> : null}
                   </div>
 
-                  {[1, 2].map((sideNumber) => (
-                    <div
-                      key={sideNumber}
-                      data-winning-side={winningSideNumber === sideNumber ? "true" : undefined}
-                      className={
-                        winningSideNumber === sideNumber
-                          ? "grid items-center border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--text-secondary)]"
-                          : "grid items-center border-t border-[var(--border)] text-[var(--text-secondary)]"
-                      }
-                      style={{ gridTemplateColumns: `minmax(0, 1fr) repeat(${Math.max(scoreColumns.length, 1)}, minmax(2rem, max-content))` }}
-                    >
-                      <div className="px-3 py-3">{renderSidePlayers(match, sideNumber, winningSideNumber)}</div>
-                      {scoreColumns.length > 0 ? (
-                        scoreColumns.map(([sequenceNumber, score]) => (
-                          <div key={sequenceNumber} className="px-2 py-3 text-center font-semibold text-[var(--text-primary)]">
-                            {sideNumber === 1 ? (score.sideOne ?? "-") : (score.sideTwo ?? "-")}
+                  {[1, 2].map((sideNumber) => {
+                    const eloDelta = getSideEloDelta(match, sideNumber);
+
+                    return (
+                      <div
+                        key={sideNumber}
+                        data-winning-side={winningSideNumber === sideNumber ? "true" : undefined}
+                        className={
+                          winningSideNumber === sideNumber
+                            ? "grid items-center border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--text-secondary)]"
+                            : "grid items-center border-t border-[var(--border)] text-[var(--text-secondary)]"
+                        }
+                        style={{ gridTemplateColumns: `minmax(0, 1fr) repeat(${Math.max(scoreColumns.length, 1)}, minmax(2rem, max-content))${hasEloChanges ? " minmax(3.5rem, max-content)" : ""}` }}
+                      >
+                        <div className="px-3 py-3">{renderSidePlayers(match, sideNumber, winningSideNumber)}</div>
+                        {scoreColumns.length > 0 ? (
+                          scoreColumns.map(([sequenceNumber, score]) => (
+                            <div key={sequenceNumber} className="px-2 py-3 text-center font-semibold text-[var(--text-primary)]">
+                              {sideNumber === 1 ? (score.sideOne ?? "-") : (score.sideTwo ?? "-")}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-2 py-3 text-center text-[var(--text-muted)]">-</div>
+                        )}
+                        {hasEloChanges ? (
+                          <div
+                            className={
+                              eloDelta !== null && eloDelta > 0
+                                ? "px-2 py-3 text-center font-semibold tabular-nums text-[var(--success)]"
+                                : "px-2 py-3 text-center font-semibold tabular-nums text-[var(--danger)]"
+                            }
+                          >
+                            {eloDelta === null ? "-" : formatEloDelta(eloDelta)}
                           </div>
-                        ))
-                      ) : (
-                        <div className="px-2 py-3 text-center text-[var(--text-muted)]">-</div>
-                      )}
-                    </div>
-                  ))}
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
                 {match.notes ? <p className="text-[var(--text-muted)]">{match.notes}</p> : null}
               </li>

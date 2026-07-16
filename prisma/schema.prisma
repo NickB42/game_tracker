@@ -17,7 +17,6 @@ enum GameSessionSource {
   MANUAL
   ONLINE
 }
-
 enum ActivityType {
   CARD
   SQUASH
