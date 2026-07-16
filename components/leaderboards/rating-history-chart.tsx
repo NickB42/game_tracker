@@ -201,7 +201,7 @@ export function RatingHistoryChart({
             role="img"
             aria-label={`${ratingLabel} rating history`}
           >
-            <title>{ratingLabel} rating history</title>
+            <title>{`${ratingLabel} rating history`}</title>
             <desc>Step chart showing each selected player&apos;s rating after every completed session.</desc>
 
             {yTicks.map((tick) => {
@@ -276,10 +276,7 @@ export function RatingHistoryChart({
                         stroke={color}
                         strokeWidth={showPointMarkers ? 2.5 : 0}
                       >
-                        <title>
-                          {entry.playerDisplayName} · {point.sessionTitle ?? "Untitled session"} ·{" "}
-                          {dateFormatter.format(new Date(point.playedAt))} · {ratingLabel} {formatRating(point.rating)} ({formatDelta(point.delta)})
-                        </title>
+                        <title>{`${entry.playerDisplayName} · ${point.sessionTitle ?? "Untitled session"} · ${dateFormatter.format(new Date(point.playedAt))} · ${ratingLabel} ${formatRating(point.rating)} (${formatDelta(point.delta)})`}</title>
                       </circle>
                     </a>
                   ))}
