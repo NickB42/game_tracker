@@ -53,6 +53,7 @@ type SportsSessionSummaryRow = {
   playerId: string;
   playerDisplayName: string;
   matchWins: number;
+  eloDelta: number;
 };
 
 type SportsMatchView = {
@@ -101,6 +102,11 @@ function formatDateTime(value: Date) {
   return dateFormatter.format(value);
 }
 
+function formatEloDelta(delta: number) {
+  const roundedDelta = Math.round(delta);
+  return `${roundedDelta > 0 ? "+" : ""}${roundedDelta}`;
+}
+
 function buildSportsSessionSummary(gameSession: SessionDetailView, sportsMatches: SportsMatchView[]) {
   const rowsByPlayerId = new Map<string, SportsSessionSummaryRow>();
 
@@ -110,10 +116,19 @@ function buildSportsSessionSummary(gameSession: SessionDetailView, sportsMatches
       playerId: participant.player.id,
       playerDisplayName: participant.player.displayName,
       matchWins: 0,
+      eloDelta: 0,
     });
   }
 
   for (const match of sportsMatches) {
+    for (const change of match.eloChanges) {
+      const row = rowsByPlayerId.get(change.playerId);
+
+      if (row) {
+        row.eloDelta += change.delta;
+      }
+    }
+
     const winningSideNumber = match.result?.winningSideNumber;
 
     if (!winningSideNumber) {
@@ -320,6 +335,7 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
                       <tr>
                         <th>Player</th>
                         <th>Match wins</th>
+                        <th>Elo +/-</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -331,6 +347,17 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
                             </Link>
                           </td>
                           <td>{participant.matchWins}</td>
+                          <td
+                            className={
+                              participant.eloDelta > 0
+                                ? "font-semibold tabular-nums text-[var(--success)]"
+                                : participant.eloDelta < 0
+                                  ? "font-semibold tabular-nums text-[var(--danger)]"
+                                  : "tabular-nums text-[var(--text-muted)]"
+                            }
+                          >
+                            {formatEloDelta(participant.eloDelta)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

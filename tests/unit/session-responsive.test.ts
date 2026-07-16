@@ -414,12 +414,14 @@ describe("Session detail and result action polish", () => {
     assert(markup.includes("-16"));
   });
 
-  it("summarizes sports sessions with match wins", async () => {
+  it("summarizes sports sessions with match wins and net Elo changes", async () => {
     const testModule = await import("@/app/(dashboard)/dashboard/sessions/[id]/page");
     const source = testModule.default.toString();
 
     assert(source.includes("buildSportsSessionSummary"));
     assert(source.includes("matchWins"));
+    assert(source.includes("eloDelta"));
     assert(source.includes("Match wins"));
+    assert(source.includes("Elo +/-"));
   });
 });
