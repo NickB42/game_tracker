@@ -12,6 +12,7 @@ describe("leaderboard data-layer filters", () => {
     assert.equal(where.gameSession.archivedAt, null);
     assert.equal(where.gameSession.activityType, "CARD");
     assert.equal("groupId" in where.gameSession, false);
+    assert.equal("playedAt" in where.gameSession, false);
   });
 
   it("group activity filter scopes card history to group and activity", () => {
@@ -21,6 +22,7 @@ describe("leaderboard data-layer filters", () => {
     assert.equal(where.gameSession.archivedAt, null);
     assert.equal(where.gameSession.activityType, "CARD");
     assert.equal(where.gameSession.groupId, "group-1");
+    assert.equal("playedAt" in where.gameSession, false);
   });
 
   it("global activity filter scopes sports history by activity", () => {
@@ -29,6 +31,7 @@ describe("leaderboard data-layer filters", () => {
     assert.equal(where.gameSession.archivedAt, null);
     assert.equal(where.gameSession.activityType, "SQUASH");
     assert.equal("groupId" in where.gameSession, false);
+    assert.equal("playedAt" in where.gameSession, false);
   });
 
   it("group activity filter scopes sports history by group and activity", () => {
@@ -37,6 +40,7 @@ describe("leaderboard data-layer filters", () => {
     assert.equal(where.gameSession.archivedAt, null);
     assert.equal(where.gameSession.activityType, "PADEL");
     assert.equal(where.gameSession.groupId, "group-2");
+    assert.equal("playedAt" in where.gameSession, false);
   });
 });
 

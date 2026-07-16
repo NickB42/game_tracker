@@ -347,16 +347,18 @@ export default async function GameSessionDetailPage({ params, searchParams }: Ga
                             </Link>
                           </td>
                           <td>{participant.matchWins}</td>
-                          <td
-                            className={
-                              participant.eloDelta > 0
-                                ? "font-semibold tabular-nums text-[var(--success)]"
-                                : participant.eloDelta < 0
-                                  ? "font-semibold tabular-nums text-[var(--danger)]"
-                                  : "tabular-nums text-[var(--text-muted)]"
-                            }
-                          >
-                            {formatEloDelta(participant.eloDelta)}
+                          <td className="tabular-nums">
+                            <span
+                              className={
+                                participant.eloDelta > 0
+                                  ? "font-semibold text-[var(--success)]"
+                                  : participant.eloDelta < 0
+                                    ? "font-semibold text-[var(--danger)]"
+                                    : "text-[var(--text-muted)]"
+                              }
+                            >
+                              {formatEloDelta(participant.eloDelta)}
+                            </span>
                           </td>
                         </tr>
                       ))}
