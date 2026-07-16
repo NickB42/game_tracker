@@ -72,6 +72,9 @@ describe("RatingHistoryChart", () => {
     assert(markup.includes('/dashboard/sessions/session-1'));
     assert(markup.includes("#2563eb"));
     assert(markup.includes("#dc2626"));
+    assert(markup.includes("Timeline"));
+    assert(markup.includes("Sessions"));
+    assert(markup.includes('data-scale-mode="time"'));
     assert(!markup.includes("One point per session"));
   });
 });

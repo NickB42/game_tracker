@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ActivityType } from "@prisma/client";
 
 import type { RatingHistoryPoint, RatingHistorySeries } from "@/lib/db/leaderboards";
 
 const CHART_WIDTH = 960;
+const MIN_TIMELINE_WIDTH = 704;
+const MIN_COMPACT_WIDTH = 320;
 const CHART_HEIGHT = 420;
 const MARGIN = { top: 28, right: 24, bottom: 52, left: 68 };
-const PLOT_WIDTH = CHART_WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
 const DEFAULT_VISIBLE_SERIES = 8;
 const SERIES_COLORS = [
@@ -33,6 +34,8 @@ type RatingHistoryChartProps = {
   focusPlayerId?: string;
   maxInitialSeries?: number;
 };
+
+type XAxisMode = "time" | "sessions";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
@@ -71,10 +74,14 @@ function buildStepPath(
   return path;
 }
 
-function getXAxisTicks(points: RatingHistoryPoint[]) {
+function getXAxisTicks(points: RatingHistoryPoint[], mode: XAxisMode, maxTickCount: number) {
   const orderedPoints = [...points].sort((a, b) => a.order - b.order);
-  const uniquePoints = [...new Map(orderedPoints.map((point) => [new Date(point.playedAt).getTime(), point])).values()];
-  const tickCount = Math.min(5, uniquePoints.length);
+  const uniquePoints = [
+    ...new Map(
+      orderedPoints.map((point) => [mode === "sessions" ? point.sessionId : new Date(point.playedAt).getTime(), point]),
+    ).values(),
+  ];
+  const tickCount = Math.min(maxTickCount, uniquePoints.length);
 
   if (tickCount <= 1) {
     return uniquePoints;
@@ -96,6 +103,9 @@ export function RatingHistoryChart({
     ? series.filter((entry) => entry.playerId === focusPlayerId).map((entry) => entry.playerId)
     : series.slice(0, maxInitialSeries).map((entry) => entry.playerId);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(() => new Set(initialPlayerIds));
+  const [xAxisMode, setXAxisMode] = useState<XAxisMode>("time");
+  const [containerWidth, setContainerWidth] = useState(CHART_WIDTH);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const selectedSeries = series.filter((entry) => selectedPlayerIds.has(entry.playerId));
   const selectedPoints = selectedSeries.flatMap((entry) => entry.points);
   const scalePoints = selectedPoints.length > 0 ? selectedPoints : (series[0]?.points ?? []);
@@ -103,6 +113,23 @@ export function RatingHistoryChart({
   const colorByPlayerId = new Map(
     series.map((entry, index) => [entry.playerId, SERIES_COLORS[index % SERIES_COLORS.length] ?? SERIES_COLORS[0]]),
   );
+
+  useEffect(() => {
+    const container = chartContainerRef.current;
+
+    if (!container || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        setContainerWidth(Math.max(MIN_COMPACT_WIDTH, Math.floor(entry.contentRect.width)));
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [selectedSeries.length]);
 
   function togglePlayer(playerId: string) {
     setSelectedPlayerIds((current) => {
@@ -138,35 +165,75 @@ export function RatingHistoryChart({
   const ratingSpan = Math.max(rawMaxRating - rawMinRating, activityType === "CARD" ? 4 : 20);
   const minRating = rawMinRating - ratingSpan * 0.12;
   const maxRating = rawMaxRating + ratingSpan * 0.12;
+  const chartWidth =
+    xAxisMode === "sessions"
+      ? Math.max(MIN_COMPACT_WIDTH, containerWidth)
+      : Math.max(MIN_TIMELINE_WIDTH, containerWidth);
+  const plotWidth = chartWidth - MARGIN.left - MARGIN.right;
+  const orderedSessionPoints = [
+    ...new Map(
+      [...scalePoints]
+        .sort((a, b) => a.order - b.order)
+        .map((point) => [point.sessionId, point]),
+    ).values(),
+  ];
+  const sessionIndexById = new Map(orderedSessionPoints.map((point, index) => [point.sessionId, index]));
   const xScale = (point: RatingHistoryPoint) => {
+    if (xAxisMode === "sessions") {
+      const sessionIndex = sessionIndexById.get(point.sessionId) ?? 0;
+      const lastSessionIndex = Math.max(orderedSessionPoints.length - 1, 0);
+      return MARGIN.left + (lastSessionIndex === 0 ? plotWidth / 2 : (sessionIndex / lastSessionIndex) * plotWidth);
+    }
+
     const time = new Date(point.playedAt).getTime();
-    return MARGIN.left + (maxTime === minTime ? PLOT_WIDTH / 2 : ((time - minTime) / (maxTime - minTime)) * PLOT_WIDTH);
+    return MARGIN.left + (maxTime === minTime ? plotWidth / 2 : ((time - minTime) / (maxTime - minTime)) * plotWidth);
   };
   const yScale = (rating: number) => MARGIN.top + ((maxRating - rating) / (maxRating - minRating)) * PLOT_HEIGHT;
   const yTicks = Array.from({ length: 5 }, (_, index) => minRating + ((maxRating - minRating) * index) / 4).reverse();
-  const xTicks = getXAxisTicks(scalePoints);
+  const xTicks = getXAxisTicks(scalePoints, xAxisMode, chartWidth < 520 ? 3 : 5);
   const showPointMarkers = selectedPoints.length <= 160;
 
   return (
     <div className="space-y-4" data-testid="rating-history-chart">
-      {series.length > maxInitialSeries ? (
-        <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2" aria-label="Rating history scale">
           <button
             type="button"
-            className="app-button app-button-ghost"
-            onClick={() => setSelectedPlayerIds(new Set(series.slice(0, maxInitialSeries).map((entry) => entry.playerId)))}
+            aria-pressed={xAxisMode === "time"}
+            className={`app-button ${xAxisMode === "time" ? "app-button-secondary" : "app-button-ghost"}`}
+            onClick={() => setXAxisMode("time")}
           >
-            Top {Math.min(maxInitialSeries, series.length)}
+            Timeline
           </button>
           <button
             type="button"
-            className="app-button app-button-ghost"
-            onClick={() => setSelectedPlayerIds(new Set(series.map((entry) => entry.playerId)))}
+            aria-pressed={xAxisMode === "sessions"}
+            className={`app-button ${xAxisMode === "sessions" ? "app-button-secondary" : "app-button-ghost"}`}
+            onClick={() => setXAxisMode("sessions")}
           >
-            Show all
+            Sessions
           </button>
         </div>
-      ) : null}
+
+        {series.length > maxInitialSeries ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="app-button app-button-ghost"
+              onClick={() => setSelectedPlayerIds(new Set(series.slice(0, maxInitialSeries).map((entry) => entry.playerId)))}
+            >
+              Top {Math.min(maxInitialSeries, series.length)}
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-ghost"
+              onClick={() => setSelectedPlayerIds(new Set(series.map((entry) => entry.playerId)))}
+            >
+              Show all
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex flex-wrap gap-2" aria-label="Players shown in rating history">
         {series.map((entry) => {
@@ -194,10 +261,16 @@ export function RatingHistoryChart({
           <p className="mt-1 text-sm text-[var(--text-muted)]">Use the player controls above to display rating history.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
+        <div
+          ref={chartContainerRef}
+          className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]"
+          data-scale-mode={xAxisMode}
+        >
           <svg
-            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-            className="h-auto min-w-[44rem] w-full"
+            viewBox={`0 0 ${chartWidth} ${CHART_HEIGHT}`}
+            width={chartWidth}
+            height={CHART_HEIGHT}
+            className="block max-w-none"
             role="img"
             aria-label={`${ratingLabel} rating history`}
           >
@@ -211,7 +284,7 @@ export function RatingHistoryChart({
                 <g key={tick}>
                   <line
                     x1={MARGIN.left}
-                    x2={CHART_WIDTH - MARGIN.right}
+                    x2={chartWidth - MARGIN.right}
                     y1={y}
                     y2={y}
                     stroke="var(--border)"
