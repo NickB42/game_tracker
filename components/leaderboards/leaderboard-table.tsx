@@ -54,7 +54,7 @@ export function LeaderboardTable({ rows, activityType, scopeLabel }: Leaderboard
                 return (
                   <tr key={row.playerId}>
                     <td className="px-2 py-2">
-                      <Link className="block truncate font-medium text-[var(--text-primary)] underline" href={`/dashboard/players/${row.playerId}`}>
+                      <Link className="block truncate font-medium text-[var(--text-primary)] underline" href={`/dashboard/players/${row.playerId}?activity=${activityType}`}>
                         {row.playerDisplayName}
                       </Link>
                     </td>
@@ -96,7 +96,7 @@ export function LeaderboardTable({ rows, activityType, scopeLabel }: Leaderboard
                 <tr key={row.playerId}>
                   <td>{index + 1}</td>
                   <td className="font-medium text-[var(--text-primary)]">
-                    <Link className="app-button app-button-ghost" href={`/dashboard/players/${row.playerId}`}>
+                    <Link className="app-button app-button-ghost" href={`/dashboard/players/${row.playerId}?activity=${activityType}`}>
                       {row.playerDisplayName}
                     </Link>
                   </td>

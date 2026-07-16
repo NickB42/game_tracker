@@ -9,6 +9,7 @@ export type EloMatchParticipant = {
 
 export type EloMatchEvent = {
   id?: string;
+  sessionId?: string;
   playedAt: Date;
   sequenceNumber: number;
   participants: EloMatchParticipant[];

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { computeRatingsFromRoundHistory } from "@/lib/rating/openskill";
+import { computeOpenSkillRatingUpdatesFromRoundHistory, computeRatingsFromRoundHistory } from "@/lib/rating/openskill";
 
 describe("openskill ratings", () => {
   it("keeps winner above loser for a single round", () => {
@@ -50,5 +50,26 @@ describe("openskill ratings", () => {
     const second = computeRatingsFromRoundHistory(events);
 
     assert.deepEqual(first, second);
+  });
+
+  it("reports rating changes for every round", () => {
+    const updates = computeOpenSkillRatingUpdatesFromRoundHistory([
+      {
+        id: "round-1",
+        sessionId: "session-1",
+        playedAt: new Date("2026-01-01T10:00:00Z"),
+        sequenceNumber: 1,
+        participants: [
+          { playerId: "p1", position: 1 },
+          { playerId: "p2", position: 2 },
+        ],
+      },
+    ]);
+
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0]?.event.id, "round-1");
+    assert.equal(updates[0]?.event.sessionId, "session-1");
+    assert.ok((updates[0]?.changes.find((change) => change.playerId === "p1")?.delta ?? 0) > 0);
+    assert.ok((updates[0]?.changes.find((change) => change.playerId === "p2")?.delta ?? 0) < 0);
   });
 });

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { ActivityType } from "@prisma/client";
 
+import { RatingHistoryChart } from "@/components/leaderboards/rating-history-chart";
 import { LeaderboardTable } from "@/components/leaderboards/leaderboard-table";
 import { ArrowLeftIcon } from "@/components/ui/icons";
-import { AppButton, PageHeader } from "@/components/ui/primitives";
+import { AppButton, PageHeader, SectionCard } from "@/components/ui/primitives";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getGlobalLeaderboard } from "@/lib/db/leaderboards";
 import { measureAsync } from "@/lib/server/timing";
@@ -19,13 +20,19 @@ function parseActivity(value: string | undefined): ActivityType {
 type GlobalLeaderboardPageProps = {
   searchParams: Promise<{
     activity?: string;
+    view?: string;
   }>;
 };
 
+function parseView(value: string | undefined) {
+  return value === "history" ? "history" : "standings";
+}
+
 export default async function GlobalLeaderboardPage({ searchParams }: GlobalLeaderboardPageProps) {
   await measureAsync("dashboard.leaderboards.global.auth", () => requireAuthenticatedUser());
-  const { activity } = await searchParams;
+  const { activity, view: viewParam } = await searchParams;
   const activityType = parseActivity(activity);
+  const view = parseView(viewParam);
   const leaderboard = await measureAsync("dashboard.leaderboards.global.compute", () =>
     getGlobalLeaderboard({ activityType }),
   );
@@ -51,7 +58,7 @@ export default async function GlobalLeaderboardPage({ searchParams }: GlobalLead
         ].map((entry) => (
           <Link
             key={entry.value}
-            href={`/dashboard/leaderboards/global?activity=${entry.value}`}
+            href={`/dashboard/leaderboards/global?activity=${entry.value}&view=${view}`}
             className={`app-button ${activityType === entry.value ? "app-button-primary" : "app-button-ghost"}`}
           >
             {entry.label}
@@ -59,7 +66,32 @@ export default async function GlobalLeaderboardPage({ searchParams }: GlobalLead
         ))}
       </div>
 
-      <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} scopeLabel="Global scope" />
+      <div className="flex flex-wrap gap-2" aria-label="Leaderboard view">
+        <Link
+          href={`/dashboard/leaderboards/global?activity=${activityType}&view=standings`}
+          className={`app-button ${view === "standings" ? "app-button-secondary" : "app-button-ghost"}`}
+        >
+          Standings
+        </Link>
+        <Link
+          href={`/dashboard/leaderboards/global?activity=${activityType}&view=history`}
+          className={`app-button ${view === "history" ? "app-button-secondary" : "app-button-ghost"}`}
+        >
+          Rating history
+        </Link>
+      </div>
+
+      {view === "history" ? (
+        <SectionCard title="Global rating history">
+          <RatingHistoryChart
+            key={`global-${activityType}`}
+            series={leaderboard.history}
+            activityType={leaderboard.activityType}
+          />
+        </SectionCard>
+      ) : (
+        <LeaderboardTable rows={leaderboard.rows} activityType={leaderboard.activityType} scopeLabel="Global scope" />
+      )}
     </section>
   );
 }

@@ -156,3 +156,15 @@ describe("Players page - Component structure validation", () => {
     assert(source.includes("ADMIN"));
   });
 });
+
+describe("Player detail rating history", () => {
+  it("renders global activity rating history on the existing player profile", async () => {
+    const testModule = await import("@/app/(dashboard)/dashboard/players/[id]/page");
+    const source = testModule.default.toString();
+
+    assert(source.includes("getGlobalLeaderboard"));
+    assert(source.includes("RatingHistoryChart"));
+    assert(source.includes("Rating history"));
+    assert(source.includes("activityType"));
+  });
+});

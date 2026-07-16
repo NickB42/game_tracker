@@ -64,6 +64,9 @@ describe("leaderboard page headers", () => {
     const source = testModule.default.toString();
 
     assert(source.includes("Global leaderboard"));
+    assert(source.includes("RatingHistoryChart"));
+    assert(source.includes("Rating history"));
+    assert(source.includes("view"));
     assert(!source.includes("ActivityBadge"));
   });
 
@@ -72,6 +75,9 @@ describe("leaderboard page headers", () => {
     const source = testModule.default.toString();
 
     assert(source.includes("PageHeader"));
+    assert(source.includes("RatingHistoryChart"));
+    assert(source.includes("Rating history"));
+    assert(source.includes("view"));
     assert(!source.includes("ActivityBadge"));
   });
 

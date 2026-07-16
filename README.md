@@ -11,6 +11,10 @@ Online play remains card-only in this release; sports activities (SQUASH, PADEL)
 
 Phase 5 release operations, rollback steps, and post-deploy verification are documented in `docs/multi-activity-release-runbook.md`.
 
+## Rating History
+
+Global and group leaderboards include standings and rating-history views for Card, Squash, and Padel. Player profiles show activity-specific global rating history, aggregated to one point per session.
+
 ## Stack
 
 - Next.js (App Router) + TypeScript

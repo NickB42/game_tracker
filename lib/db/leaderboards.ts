@@ -4,8 +4,12 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { buildGroupVisibilityWhere, type AuthorizationActor } from "@/lib/domain/authorization";
 import { computeEloRatingUpdatesFromMatchHistory, type EloMatchEvent } from "@/lib/rating/elo";
-import type { RatingRoundEvent } from "@/lib/rating/openskill";
-import { computeActivityRatings, getRatingSystemForActivity, type RatingSystem } from "@/lib/rating/strategy";
+import {
+  computeOpenSkillRatingUpdatesFromRoundHistory,
+  type PlayerRatingSnapshot,
+  type RatingRoundEvent,
+} from "@/lib/rating/openskill";
+import { getRatingSystemForActivity, type RatingSystem } from "@/lib/rating/strategy";
 
 export type LeaderboardRow = {
   playerId: string;
@@ -24,6 +28,23 @@ export type ActivityLeaderboard = {
   activityType: ActivityType;
   ratingSystem: RatingSystem;
   rows: LeaderboardRow[];
+  history: RatingHistorySeries[];
+};
+
+export type RatingHistoryPoint = {
+  sessionId: string;
+  sessionTitle: string | null;
+  playedAt: string;
+  sequenceNumber: number;
+  order: number;
+  rating: number;
+  delta: number;
+};
+
+export type RatingHistorySeries = {
+  playerId: string;
+  playerDisplayName: string;
+  points: RatingHistoryPoint[];
 };
 
 type MutableLeaderboardStats = {
@@ -39,6 +60,19 @@ type MutableLeaderboardStats = {
 type GroupFilter = {
   groupId?: string;
   activityType: ActivityType;
+};
+
+type RatingTimelineUpdate = {
+  event: {
+    sessionId?: string;
+    playedAt: Date;
+    sequenceNumber: number;
+  };
+  changes: Array<{
+    playerId: string;
+    ratingAfter: PlayerRatingSnapshot;
+    delta: number;
+  }>;
 };
 
 export function buildCardRoundHistoryWhere(filter: GroupFilter) {
@@ -66,10 +100,12 @@ async function getRoundHistory(filter?: GroupFilter) {
   return prisma.roundResult.findMany({
     where: buildCardRoundHistoryWhere(filter ?? { activityType: "CARD" }),
     select: {
+      id: true,
       sequenceNumber: true,
       gameSession: {
         select: {
           id: true,
+          title: true,
           playedAt: true,
         },
       },
@@ -104,6 +140,7 @@ async function getSportsMatchHistory(filter: GroupFilter) {
       gameSession: {
         select: {
           id: true,
+          title: true,
           playedAt: true,
         },
       },
@@ -141,6 +178,7 @@ export async function getSportsMatchEloChangesByMatchId(gameSessionId: string, f
 
     events.push({
       id: match.id,
+      sessionId: match.gameSession.id,
       playedAt: match.gameSession.playedAt,
       sequenceNumber: match.sequenceNumber,
       winningSideNumber: match.result.winningSideNumber,
@@ -224,14 +262,9 @@ function computeDerivedMatchWins(
 }
 
 function buildRows(
-  activityType: ActivityType,
   statsByPlayerId: Map<string, MutableLeaderboardStats>,
-  ratingEvents: {
-    cardEvents: RatingRoundEvent[];
-    sportsEvents: EloMatchEvent[];
-  },
+  ratingByPlayerId: Map<string, PlayerRatingSnapshot>,
 ): LeaderboardRow[] {
-  const ratingByPlayerId = computeActivityRatings(activityType, ratingEvents);
   const rows: LeaderboardRow[] = [];
 
   for (const stats of statsByPlayerId.values()) {
@@ -270,18 +303,96 @@ function buildRows(
   return rows;
 }
 
-async function buildCardLeaderboard(filter: GroupFilter): Promise<LeaderboardRow[]> {
+function getLatestRatings(updates: RatingTimelineUpdate[]) {
+  const ratingsByPlayerId = new Map<string, PlayerRatingSnapshot>();
+
+  for (const update of updates) {
+    for (const change of update.changes) {
+      ratingsByPlayerId.set(change.playerId, change.ratingAfter);
+    }
+  }
+
+  return ratingsByPlayerId;
+}
+
+function buildRatingHistory(
+  updates: RatingTimelineUpdate[],
+  statsByPlayerId: Map<string, MutableLeaderboardStats>,
+  sessionTitleById: Map<string, string | null>,
+): RatingHistorySeries[] {
+  const pointsByPlayerId = new Map<string, Map<string, RatingHistoryPoint>>();
+  const sessionOrderById = new Map<string, number>();
+
+  updates.forEach((update, updateIndex) => {
+    if (update.event.sessionId) {
+      sessionOrderById.set(update.event.sessionId, updateIndex);
+    }
+  });
+
+  updates.forEach((update) => {
+    const sessionId = update.event.sessionId;
+
+    if (!sessionId) {
+      return;
+    }
+
+    for (const change of update.changes) {
+      const playerPoints = pointsByPlayerId.get(change.playerId) ?? new Map<string, RatingHistoryPoint>();
+      const existingPoint = playerPoints.get(sessionId);
+
+      if (existingPoint) {
+        existingPoint.sequenceNumber = update.event.sequenceNumber;
+        existingPoint.order = sessionOrderById.get(sessionId) ?? existingPoint.order;
+        existingPoint.rating = change.ratingAfter.ordinal;
+        existingPoint.delta += change.delta;
+      } else {
+        playerPoints.set(sessionId, {
+          sessionId,
+          sessionTitle: sessionTitleById.get(sessionId) ?? null,
+          playedAt: update.event.playedAt.toISOString(),
+          sequenceNumber: update.event.sequenceNumber,
+          order: sessionOrderById.get(sessionId) ?? 0,
+          rating: change.ratingAfter.ordinal,
+          delta: change.delta,
+        });
+      }
+
+      pointsByPlayerId.set(change.playerId, playerPoints);
+    }
+  });
+
+  return [...statsByPlayerId.values()]
+    .map((stats) => ({
+      playerId: stats.playerId,
+      playerDisplayName: stats.playerDisplayName,
+      points: [...(pointsByPlayerId.get(stats.playerId)?.values() ?? [])].sort((a, b) => a.order - b.order),
+    }))
+    .filter((series) => series.points.length > 0);
+}
+
+function sortHistoryByLeaderboardRank(history: RatingHistorySeries[], rows: LeaderboardRow[]) {
+  const rankByPlayerId = new Map(rows.map((row, index) => [row.playerId, index]));
+  return history.sort(
+    (a, b) =>
+      (rankByPlayerId.get(a.playerId) ?? Number.MAX_SAFE_INTEGER) -
+      (rankByPlayerId.get(b.playerId) ?? Number.MAX_SAFE_INTEGER),
+  );
+}
+
+async function buildCardLeaderboard(filter: GroupFilter) {
   const rounds = await getRoundHistory(filter);
 
   if (rounds.length === 0) {
-    return [];
+    return { rows: [], history: [] };
   }
 
   const statsByPlayerId = new Map<string, MutableLeaderboardStats>();
   const ratingEvents: RatingRoundEvent[] = [];
   const sessionRoundWins = new Map<string, Map<string, number>>();
+  const sessionTitleById = new Map<string, string | null>();
 
   for (const round of rounds) {
+    sessionTitleById.set(round.gameSession.id, round.gameSession.title);
     const ratingEventParticipants = round.placements.map((placement) => {
       const player = placement.sessionParticipant.player;
       const stats = getOrCreateStats(statsByPlayerId, player);
@@ -296,6 +407,8 @@ async function buildCardLeaderboard(filter: GroupFilter): Promise<LeaderboardRow
     });
 
     ratingEvents.push({
+      id: round.id,
+      sessionId: round.gameSession.id,
       playedAt: round.gameSession.playedAt,
       sequenceNumber: round.sequenceNumber,
       participants: ratingEventParticipants,
@@ -316,27 +429,33 @@ async function buildCardLeaderboard(filter: GroupFilter): Promise<LeaderboardRow
   }
 
   computeDerivedMatchWins(sessionRoundWins, statsByPlayerId);
+  const timeline = computeOpenSkillRatingUpdatesFromRoundHistory(ratingEvents);
+  const rows = buildRows(statsByPlayerId, getLatestRatings(timeline));
+  const history = sortHistoryByLeaderboardRank(
+    buildRatingHistory(timeline, statsByPlayerId, sessionTitleById),
+    rows,
+  );
 
-  return buildRows("CARD", statsByPlayerId, {
-    cardEvents: ratingEvents,
-    sportsEvents: [],
-  });
+  return { rows, history };
 }
 
-async function buildSportsLeaderboard(filter: GroupFilter): Promise<LeaderboardRow[]> {
+async function buildSportsLeaderboard(filter: GroupFilter) {
   const matches = await getSportsMatchHistory(filter);
 
   if (matches.length === 0) {
-    return [];
+    return { rows: [], history: [] };
   }
 
   const statsByPlayerId = new Map<string, MutableLeaderboardStats>();
   const ratingEvents: EloMatchEvent[] = [];
+  const sessionTitleById = new Map<string, string | null>();
 
   for (const match of matches) {
     if (!match.result?.winningSideNumber || (match.result.winningSideNumber !== 1 && match.result.winningSideNumber !== 2)) {
       continue;
     }
+
+    sessionTitleById.set(match.gameSession.id, match.gameSession.title);
 
     for (const participant of match.participants) {
       const stats = getOrCreateStats(statsByPlayerId, participant.player);
@@ -349,6 +468,8 @@ async function buildSportsLeaderboard(filter: GroupFilter): Promise<LeaderboardR
     }
 
     ratingEvents.push({
+      id: match.id,
+      sessionId: match.gameSession.id,
       playedAt: match.gameSession.playedAt,
       sequenceNumber: match.sequenceNumber,
       winningSideNumber: match.result.winningSideNumber,
@@ -361,14 +482,29 @@ async function buildSportsLeaderboard(filter: GroupFilter): Promise<LeaderboardR
     });
   }
 
-  return buildRows(filter.activityType, statsByPlayerId, {
-    cardEvents: [],
-    sportsEvents: ratingEvents,
-  });
+  const timeline: RatingTimelineUpdate[] = computeEloRatingUpdatesFromMatchHistory(ratingEvents).map((update) => ({
+    event: update.event,
+    changes: update.changes.map((change) => ({
+      playerId: change.playerId,
+      ratingAfter: {
+        mu: change.ratingAfter,
+        sigma: 0,
+        ordinal: change.ratingAfter,
+      },
+      delta: change.delta,
+    })),
+  }));
+  const rows = buildRows(statsByPlayerId, getLatestRatings(timeline));
+  const history = sortHistoryByLeaderboardRank(
+    buildRatingHistory(timeline, statsByPlayerId, sessionTitleById),
+    rows,
+  );
+
+  return { rows, history };
 }
 
 async function buildLeaderboard(filter: GroupFilter): Promise<ActivityLeaderboard> {
-  const rows =
+  const result =
     filter.activityType === "CARD"
       ? await buildCardLeaderboard(filter)
       : await buildSportsLeaderboard(filter);
@@ -376,7 +512,8 @@ async function buildLeaderboard(filter: GroupFilter): Promise<ActivityLeaderboar
   return {
     activityType: filter.activityType,
     ratingSystem: getRatingSystemForActivity(filter.activityType),
-    rows,
+    rows: result.rows,
+    history: result.history,
   };
 }
 
@@ -385,7 +522,7 @@ export async function getGlobalLeaderboard(options?: { activityType?: ActivityTy
 
   return unstable_cache(
     async () => buildLeaderboard({ activityType }),
-    ["leaderboard", "global", activityType],
+    ["leaderboard", "global", "with-history-v1", activityType],
     {
       revalidate: 60,
       tags: ["leaderboard:global"],
